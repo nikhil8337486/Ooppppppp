@@ -18,6 +18,7 @@ user_credits = {}
 def get_vehicle_details(reg_no):
     api_url = f"https://carflow-mocha.vercel.app/api/vehicle?numberPlate={reg_no}"
     response = requests.get(api_url)
+    
     if response.status_code == 200:
         data = response.json()
         if data["statusCode"] == 200:
@@ -105,19 +106,29 @@ def fetch_vehicle_info(message):
     user_credits[user_id] -= 20  # 20 credit cut honge
     bot.send_message(message.chat.id, details)
 
-# Referral ka option show karega
+# Referral ka option show karega (Shareable link ke saath)
 def send_referral_options(chat_id, user_id):
     referral_message = (
         "🎉 You have run out of credits!\n"
-        "🆓 Earn 20 credits for each referral.\n"
-        "📤 Invite your friends to continue searching for vehicle details."
+        "🆓 Earn 20 credits (1 Search) for each referral.\n"
+        "📤 Invite your friends to continue searching for vehicle details.\n\n"
+        f"🔗 *Your Referral Link:* [Click Here](https://t.me/VEHICLEINFOIND_BOT?start={user_id})"
     )
 
     keyboard = telebot.types.InlineKeyboardMarkup()
-    referral_button = telebot.types.InlineKeyboardButton(text="🔗 Refer & Earn", url="https://t.me/VEHICLEINFOIND_BOT?start={user_id}")
-    keyboard.add(referral_button)
+    
+    # Referral button
+    referral_link = f"https://t.me/VEHICLEINFOIND_BOT?start={user_id}"
+    referral_button = telebot.types.InlineKeyboardButton(text="🔗 Refer & Earn", url=referral_link)
 
-    bot.send_message(chat_id, referral_message, reply_markup=keyboard)
+    # Share button
+    share_text = f"🚘 Get vehicle details instantly!\nUse my referral link to start: {referral_link}"
+    share_button = telebot.types.InlineKeyboardButton(text="📤 Share Referral Link", switch_inline_query=share_text)
+
+    keyboard.add(referral_button)
+    keyboard.add(share_button)
+
+    bot.send_message(chat_id, referral_message, reply_markup=keyboard, parse_mode="Markdown")
 
 # Bot owner ke liye credit add karne ka command
 @bot.message_handler(commands=['addcredits'])

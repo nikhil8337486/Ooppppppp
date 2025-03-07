@@ -114,7 +114,7 @@ def send_referral_options(chat_id, user_id):
     )
 
     keyboard = telebot.types.InlineKeyboardMarkup()
-    referral_button = telebot.types.InlineKeyboardButton(text="🔗 Refer & Earn", url="https://t.me/VEHICLEINFOIND_BOT?start=referral")
+    referral_button = telebot.types.InlineKeyboardButton(text="🔗 Refer & Earn", url="https://t.me/VEHICLEINFOIND_BOT?start={user_id}")
     keyboard.add(referral_button)
 
     bot.send_message(chat_id, referral_message, reply_markup=keyboard)

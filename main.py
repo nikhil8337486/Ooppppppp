@@ -256,6 +256,8 @@ def add_credits(update: Update, context: CallbackContext):
         update.message.reply_text("⚠️ Invalid input. Use: /addcredits <user_id> <amount>")
 
 # Main Function
+import asyncio  # ✅ Yeh zaroori hai
+
 def main():
     app = Application.builder().token(TOKEN).build()
 
@@ -268,7 +270,9 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     print("Bot is running...")
-    app.run_polling()
+    
+    # ✅ Async loop ko properly handle karne ke liye
+    asyncio.run(app.run_polling())
 
 if __name__ == "__main__":
     main()

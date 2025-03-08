@@ -12,7 +12,7 @@ logging.basicConfig(
 )
 
 # Bot Token and Channel
-TOKEN = "YOUR_BOT_TOKEN"
+TOKEN = "7738466078:AAH2qHH0PZBLFompWoQBdf7jtpn2XTvRnJI"
 API_URL = "https://carflow-mocha.vercel.app/api/vehicle?numberPlate={}"
 CHANNEL = "@RtoVehicle"
 

@@ -3,7 +3,7 @@ import json
 import logging
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, Filters, CallbackQueryHandler, CallbackContext
 
 # Logging setup
 logging.basicConfig(
@@ -258,19 +258,18 @@ def add_credits(update: Update, context: CallbackContext):
 
 # Main Function
 def main():
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
+    app = Application.builder().token(TOKEN).build()
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("addcredits", add_credits))  
-    dp.add_handler(CallbackQueryHandler(check_subscription, pattern="^check_subscription$"))
-    dp.add_handler(CallbackQueryHandler(profile, pattern="^profile$"))
-    dp.add_handler(CallbackQueryHandler(refer, pattern="^refer$"))
-    dp.add_handler(CallbackQueryHandler(search, pattern="^search$"))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("addcredits", add_credits))
+    app.add_handler(CallbackQueryHandler(check_subscription, pattern="^check_subscription$"))
+    app.add_handler(CallbackQueryHandler(profile, pattern="^profile$"))
+    app.add_handler(CallbackQueryHandler(refer, pattern="^refer$"))
+    app.add_handler(CallbackQueryHandler(search, pattern="^search$"))
+    app.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-    updater.start_polling()
-    updater.idle()
+    print("Bot is running...")
+    app.run_polling()
 
 if __name__ == "__main__":
     main()

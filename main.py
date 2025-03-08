@@ -1,273 +1,159 @@
-import os
-import json
-import logging
+import telebot
 import requests
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackContext, MessageHandler, Filters, CallbackQueryHandler
 
-# Logging setup
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+# Bot ka token
+BOT_TOKEN = "7738466078:AAH2qHH0PZBLFompWoQBdf7jtpn2XTvRnJI"
+bot = telebot.TeleBot(BOT_TOKEN)
 
-# Bot Token and Channel
-TOKEN = "7738466078:AAH2qHH0PZBLFompWoQBdf7jtpn2XTvRnJI"
-API_URL = "https://carflow-mocha.vercel.app/api/vehicle?numberPlate={}"
-CHANNEL = "@RtoVehicle"
+# Sirf is group me bot kaam karega
+ALLOWED_GROUP_ID = -1002320210604
 
-# Admin List (Replace with actual Telegram user IDs)
-ADMIN_IDS = [7394317325]
+# Bot owner ka Telegram ID
+BOT_OWNER_ID = 7394317325  # Apna Telegram ID yahan daalo
 
-# User data file
-USER_DATA_FILE = "users.json"
+# User credits store karne ke liye dictionary
+user_credits = {}
 
-# Load user data from file
-def load_users():
-    if os.path.exists(USER_DATA_FILE):
-        with open(USER_DATA_FILE, "r") as file:
-            return json.load(file)
-    return {}
+# Function jo vehicle details fetch karega
+def get_vehicle_details(reg_no):
+    api_url = f"https://carflow-mocha.vercel.app/api/vehicle?numberPlate={reg_no}"
+    response = requests.get(api_url)
+    
+    if response.status_code == 200:
+        data = response.json()
+        if data["statusCode"] == 200:
+            v = data["response"]
 
-# Save user data to file
-def save_users():
-    with open(USER_DATA_FILE, "w") as file:
-        json.dump(users, file, indent=4)
+            message = (
+                f"🚗 *Vehicle Information*\n\n"
+                f"🔹 *Registration Details*\n"
+                f"➤ Registration Number: {v.get('regNo', 'N/A')}\n"
+                f"➤ RTO Code: {v.get('rtoCode', 'N/A')}\n"
+                f"➤ Registration Authority: {v.get('regAuthority', 'N/A')}\n"
+                f"➤ Registration Date: {v.get('regDate', 'N/A')}\n\n"
 
-# Load users initially
-users = load_users()
+                f"🔹 *Vehicle Specifications*\n"
+                f"➤ Vehicle Class: {v.get('vehicleClass', 'N/A')}\n"
+                f"➤ Manufacturer: {v.get('manufacturer', 'N/A')}\n"
+                f"➤ Model: {v.get('vehicle', 'N/A')} ({v.get('variant', 'N/A')})\n"
+                f"➤ Fuel Type: {v.get('fuelType', 'N/A')}\n"
+                f"➤ Cubic Capacity: {v.get('cubicCapacity', 'N/A')} cc\n"
+                f"➤ Vehicle Type: {v.get('vehicleType', 'N/A')}\n"
+                f"➤ Seat Capacity: {v.get('seatCapacity', 'N/A')}\n"
+                f"➤ Commercial Vehicle: {'Yes' if v.get('isCommercial') else 'No'}\n\n"
 
-# Check if user has joined the channel
-def is_subscribed(user_id, context):
-    try:
-        chat_member = context.bot.get_chat_member(CHANNEL, user_id)
-        return chat_member.status in ["member", "administrator", "creator"]
-    except:
-        return False
+                f"🔹 *Owner Information*\n"
+                f"➤ Owner Name: {v.get('owner', 'N/A')}\n"
+                f"➤ Father's Name: {v.get('ownerFatherName', 'N/A')}\n"
+                f"➤ Permanent Address: {v.get('permAddress', 'N/A')}\n"
+                f"➤ Pincode: {v.get('pincode', 'N/A')}\n\n"
+
+                f"🔹 *Financial & Insurance Details*\n"
+                f"➤ Financer Name: {v.get('financerName', 'N/A')}\n"
+                f"➤ Insurance Company: {v.get('insuranceCompanyName', 'N/A')}\n"
+                f"➤ Insurance Validity: {v.get('insuranceUpto', 'N/A')}\n"
+                f"➤ Insurance Expired: {'Yes' if v.get('insuranceExpired') else 'No'}\n\n"
+
+                f"🔹 *PUC Details*\n"
+                f"➤ PUCC Number: {v.get('puccNumber', 'N/A')}\n"
+                f"➤ PUCC Validity: {v.get('puccValidUpto', 'N/A')}\n\n"
+
+                f"🔹 *Additional Information*\n"
+                f"➤ Chassis Number: {v.get('chassis', 'N/A')}\n"
+                f"➤ Engine Number: {v.get('engine', 'N/A')}\n"
+                f"➤ Data Status: {v.get('dataStatus', 'N/A')}\n"
+                f"➤ Last Updated: {v.get('lmDate', 'N/A')}\n\n"
+
+                f"⭒ Powered By: @VEHICLEINFOIND_BOT"
+            )
+            return message
+        else:
+            return "❌ Vehicle details not found!"
+    else:
+        return "❌ API Error! Try again later."
 
 # Start command
-def start(update: Update, context: CallbackContext):
-    user = update.message.from_user if update.message else update.callback_query.from_user
-    user_id = str(user.id)  # Convert to string
-
-    if user_id not in users:
-        users[user_id] = {"balance": 10, "referrals": 0}
-        save_users()  # Save user data
-
-        # Handle Referral System
-        if context.args:  # If user joined via referral link
-            referrer_id = str(context.args[0])
-            if referrer_id in users and referrer_id != user_id:
-                users[referrer_id]["balance"] += 20  # Add 20 points to referrer
-                users[referrer_id]["referrals"] += 1  # Increment referral count
-                save_users()
-
-    if not is_subscribed(user_id, context):
-        keyboard = [
-            [InlineKeyboardButton("📢 Join Channel", url=f"https://t.me/{CHANNEL[1:]}")],
-            [InlineKeyboardButton("✅ Joined", callback_data="check_subscription")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        if update.message:
-            update.message.reply_text(
-                "😎 Hey! To use this bot, please join our channel first and click '✅ Joined'.",
-                reply_markup=reply_markup
-            )
-        elif update.callback_query:
-            update.callback_query.message.reply_text(
-                "😎 Hey! To use this bot, please join our channel first and click '✅ Joined'.",
-                reply_markup=reply_markup
-            )
+@bot.message_handler(commands=['start'])
+def ask_vehicle_number(message):
+    if message.chat.id != ALLOWED_GROUP_ID:
+        bot.send_message(message.chat.id, "❌ This bot works only in @RtoVehicle group!")
         return
 
-    keyboard = [
-        [InlineKeyboardButton("👤 Profile", callback_data="profile")],
-        [InlineKeyboardButton("🎉 Referral", callback_data="refer")],
-        [InlineKeyboardButton("🔍 Search Details", callback_data="search")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    user_id = message.from_user.id
+    if user_id not in user_credits:
+        user_credits[user_id] = 60  # 3 free searches (20x3 = 60 credits)
 
-    welcome_message = (
-        f"🌟 Welcome, {user.first_name}! 🌟\n\n"
-        "🚀 Your gateway to instant and accurate vehicle information.\n\n"
-        "🔧 *What this bot offers:*\n"
-        "🚗 Quick vehicle detail searches.\n"
-        "💰 Secure deposit options for premium services.\n"
-        "👥 Earn rewards by inviting friends.\n"
-        "📊 Track global bot statistics and user engagement.\n\n"
-        "⚡ Start exploring now and experience seamless service! 🚀"
+    bot.send_message(
+        message.chat.id,
+        "🚘 *Welcome!*\nYou have *3 free searches.*\nPlease enter your vehicle number (e.g., GJ01kd1255):"
+    )
+    bot.register_next_step_handler(message, fetch_vehicle_info)
+
+# Vehicle details fetch karega
+def fetch_vehicle_info(message):
+    user_id = message.from_user.id
+
+    if user_id not in user_credits or user_credits[user_id] < 20:
+        bot.send_message(message.chat.id, "❌ You have run out of credits! Earn more by referring friends.")
+        send_referral_options(message.chat.id, user_id)
+        return
+
+    reg_no = message.text.strip().upper()
+    bot.send_message(message.chat.id, "🔍 Fetching details, please wait...")
+
+    details = get_vehicle_details(reg_no)
+
+    user_credits[user_id] -= 20  # 20 credit cut honge
+    bot.send_message(message.chat.id, details)
+
+# Referral ka option show karega (Shareable link ke saath)
+def send_referral_options(chat_id, user_id):
+    referral_message = (
+        "🎉 You have run out of credits!\n"
+        "🆓 Earn 30 credits (1 Search) for each referral.\n"
+        "📤 Invite your friends to continue searching for vehicle details.\n\n"
+        f"🔗 *Your Referral Link:* [Click Here](https://t.me/VEHICLEINFOIND_BOT?start={user_id})"
     )
 
-    if update.message:
-        update.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode="Markdown")
-    elif update.callback_query:
-        update.callback_query.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode="Markdown")
-
-# Check Subscription
-def check_subscription(update: Update, context: CallbackContext):
-    query = update.callback_query
-    user_id = str(query.from_user.id)  # Convert to string
-
-    if is_subscribed(user_id, context):
-        query.message.delete()
-        start(update, context)  # Call start to continue bot usage
-    else:
-        query.answer("❌ Please join the channel first!", show_alert=True)
-
-# Profile Section
-def profile(update: Update, context: CallbackContext):
-    query = update.callback_query
-    user_id = str(query.from_user.id)  # Convert to string
-    user = users.get(user_id, {"balance": 0, "referrals": 0})
-
-    query.message.reply_text(
-        f"🆔 User ID: {user_id}\n💰 Balance: {user['balance']} Points\n🎯 Total Referrals: {user['referrals']}"
-    )
-
-# Referral System
-def refer(update: Update, context: CallbackContext):
-    query = update.callback_query
-    user_id = str(query.from_user.id)  # Convert to string
+    keyboard = telebot.types.InlineKeyboardMarkup()
+    
+    # Referral button
     referral_link = f"https://t.me/VEHICLEINFOIND_BOT?start={user_id}"
+    referral_button = telebot.types.InlineKeyboardButton(text="🔗 Refer & Earn", url=referral_link)
 
-    query.message.reply_text(
-        f"🔥 Refer and earn 20 points!\n🔗 Your Referral Link: {referral_link}"
-    )
+    # Share button
+    share_text = f"🚘 Get vehicle details instantly!\nUse my referral link to start: {referral_link}"
+    share_button = telebot.types.InlineKeyboardButton(text="📤 Share Referral Link", switch_inline_query=share_text)
 
-# Search Vehicle Details
-def search(update: Update, context: CallbackContext):
-    query = update.callback_query
-    user_id = str(query.from_user.id)  # Convert to string
+    keyboard.add(referral_button)
+    keyboard.add(share_button)
 
-    if users[user_id]["balance"] < 10:
-        query.message.reply_text("❌ You don't have enough points. Please deposit first.")
-        return
+    bot.send_message(chat_id, referral_message, reply_markup=keyboard, parse_mode="Markdown")
 
-    query.message.reply_text("🔍 Please enter the vehicle number:")
-    context.user_data[user_id] = {"awaiting_input": True}
-
-# Handle user input
-def handle_message(update: Update, context: CallbackContext):
-    user_id = str(update.message.chat_id)  # Convert to string
-    text = update.message.text
-
-    if context.user_data.get(user_id, {}).get("awaiting_input"):
-        del context.user_data[user_id]["awaiting_input"]
-        users[user_id]["balance"] -= 10
-        save_users()  # Save updated balance
-
-        try:
-            response = requests.get(API_URL.format(text))
-            data = response.json()
-
-            if data.get("statusCode") == 200:
-                vehicle_info = data["response"]
-
-                message = f"""━━━━━━━━━━━━━━━━━━━━━━  
-🚗 *Vehicle Information*  
-━━━━━━━━━━━━━━━━━━━━━━  
-
-🔹 *Registration Details*  
-Registration Number: {vehicle_info.get("regNo", "N/A")}  
-RTO Code: {vehicle_info.get("rtoCode", "N/A")}  
-Registration Authority: {vehicle_info.get("regAuthority", "N/A")}  
-Registration Date: {vehicle_info.get("regDate", "N/A")}  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-
-🔹 *Vehicle Specifications*  
-Vehicle Class: {vehicle_info.get("vehicleClass", "N/A")}  
-Manufacturer: {vehicle_info.get("manufacturer", "N/A")}  
-Model: {vehicle_info.get("vehicle", "N/A")} ({vehicle_info.get("variant", "N/A")})  
-Fuel Type: {vehicle_info.get("fuelType", "N/A")}  
-Cubic Capacity: {vehicle_info.get("cubicCapacity", "N/A")} cc  
-Vehicle Type: {vehicle_info.get("vehicleType", "N/A")}  
-Seat Capacity: {vehicle_info.get("seatCapacity", "N/A")}  
-Commercial Vehicle: {"Yes" if vehicle_info.get("isCommercial") else "No"}  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-
-🔹 *Owner Information*  
-Owner Name: {vehicle_info.get("owner", "N/A")}  
-Father's Name: {vehicle_info.get("ownerFatherName", "N/A")}  
-Permanent Address: {vehicle_info.get("permAddress", "N/A")}  
-Pincode: {vehicle_info.get("pincode", "N/A")}  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-
-🔹 *Financial & Insurance Details*  
-Financer Name: {vehicle_info.get("financerName", "N/A")}  
-Insurance Company: {vehicle_info.get("insuranceCompanyName", "N/A")}  
-Insurance Policy Number: {vehicle_info.get("insurancePolicyNumber", "N/A")}  
-Insurance Validity: {vehicle_info.get("insuranceUpto", "N/A")}  
-Insurance Expired: {"Yes" if vehicle_info.get("insuranceExpired") else "No"}  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-
-🔹 *PUC Details*  
-PUCC Number: {vehicle_info.get("puccNumber", "N/A")}  
-PUCC Validity: {vehicle_info.get("puccValidUpto", "N/A")}  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-
-🔹 *Additional Information*  
-Chassis Number: {vehicle_info.get("chassis", "N/A")}  
-Engine Number: {vehicle_info.get("engine", "N/A")}  
-Vehicle Age: {vehicle_info.get("vehicleAge", "N/A")}  
-Data Status: {vehicle_info.get("dataStatus", "N/A")}  
-Last Updated: {vehicle_info.get("lmDate", "N/A")}  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-⭒ *Powered By:* @RtoVehicle  
-━━━━━━━━━━━━━━━━━━━━━━"""
-
-                update.message.reply_text(message, parse_mode="Markdown")
-            else:
-                update.message.reply_text("❌ Vehicle data not found, please enter a valid number.")
-
-        except Exception as e:
-            logging.error(f"API Error: {e}")
-            update.message.reply_text("⚠️ Error fetching data from API. Please try again later.")
-
-# Fixed `/addcredits` command
-def add_credits(update: Update, context: CallbackContext):
-    if update.message.from_user.id not in ADMIN_IDS:
-        update.message.reply_text("❌ You are not authorized to use this command.")
+# Bot owner ke liye credit add karne ka command
+@bot.message_handler(commands=['addcredits'])
+def add_credits(message):
+    if message.from_user.id != BOT_OWNER_ID:
+        bot.send_message(message.chat.id, "❌ You are not authorized to use this command!")
         return
 
     try:
-        args = context.args
-        if len(args) != 2:
-            update.message.reply_text("⚠️ Usage: /addcredits <user_id> <amount>")
+        command_parts = message.text.split()
+        if len(command_parts) != 3:
+            bot.send_message(message.chat.id, "❌ Usage: /addcredits <user_id> <amount>")
             return
 
-        user_id = str(args[0])
-        amount = int(args[1])
+        user_id = int(command_parts[1])
+        amount = int(command_parts[2])
 
-        if user_id not in users:
-            update.message.reply_text(f"❌ User {user_id} not found.")
-            return
+        if user_id not in user_credits:
+            user_credits[user_id] = 0
 
-        users[user_id]["balance"] += amount
-        save_users()
-        update.message.reply_text(f"✅ Successfully added {amount} points to user {user_id}.")
-
+        user_credits[user_id] += amount
+        bot.send_message(message.chat.id, f"✅ Successfully added {amount} credits to user {user_id}!")
     except ValueError:
-        update.message.reply_text("⚠️ Invalid input. Use: /addcredits <user_id> <amount>")
+        bot.send_message(message.chat.id, "❌ Invalid command format! Use: /addcredits <user_id> <amount>")
 
-# Main Function
-def main():
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
-
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("addcredits", add_credits))  
-    dp.add_handler(CallbackQueryHandler(check_subscription, pattern="^check_subscription$"))
-    dp.add_handler(CallbackQueryHandler(profile, pattern="^profile$"))
-    dp.add_handler(CallbackQueryHandler(refer, pattern="^refer$"))
-    dp.add_handler(CallbackQueryHandler(search, pattern="^search$"))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-
-    updater.start_polling()
-    updater.idle()
-
-if __name__ == "__main__":
-    main()
+# Bot start karega
+print("Bot is running...")
+bot.polling()

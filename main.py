@@ -2,8 +2,8 @@ import os
 import json
 import logging
 import requests
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, Filters, CallbackQueryHandler, CallbackContext
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
 
 # Logging setup
 logging.basicConfig(

@@ -3,13 +3,18 @@ import json
 import logging
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackContext, MessageHandler, Filters, CallbackQueryHandler
+from telegram.ext import (
+    Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+)
 
 # Logging setup
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 
 # Bot Token and Channel
-TOKEN = "7738466078:AAH2qHH0PZBLFompWoQBdf7jtpn2XTvRnJI"
+TOKEN = "YOUR_BOT_TOKEN"
 API_URL = "https://carflow-mocha.vercel.app/api/vehicle?numberPlate={}"
 CHANNEL = "@RtoVehicle"
 

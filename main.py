@@ -2,13 +2,11 @@ import os
 import json
 import logging
 import requests
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, CallbackContext
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, CallbackContext, MessageHandler, Filters, CallbackQueryHandler
+
 # Logging setup
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
-)
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 # Bot Token and Channel
 TOKEN = "7738466078:AAH2qHH0PZBLFompWoQBdf7jtpn2XTvRnJI"
@@ -218,7 +216,7 @@ Data Status: {vehicle_info.get("dataStatus", "N/A")}
 Last Updated: {vehicle_info.get("lmDate", "N/A")}  
 
 ━━━━━━━━━━━━━━━━━━━━━━  
-⭒ *Powered By:* @VEHICLEINFOIND_BOT  
+⭒ *Powered By:* @RtoVehicle  
 ━━━━━━━━━━━━━━━━━━━━━━"""
 
                 update.message.reply_text(message, parse_mode="Markdown")
@@ -256,23 +254,20 @@ def add_credits(update: Update, context: CallbackContext):
         update.message.reply_text("⚠️ Invalid input. Use: /addcredits <user_id> <amount>")
 
 # Main Function
-import asyncio  # ✅ Yeh zaroori hai
-
 def main():
-    app = Application.builder().token(TOKEN).build()
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("addcredits", add_credits))
-    app.add_handler(CallbackQueryHandler(check_subscription, pattern="^check_subscription$"))
-    app.add_handler(CallbackQueryHandler(profile, pattern="^profile$"))
-    app.add_handler(CallbackQueryHandler(refer, pattern="^refer$"))
-    app.add_handler(CallbackQueryHandler(search, pattern="^search$"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("addcredits", add_credits))  
+    dp.add_handler(CallbackQueryHandler(check_subscription, pattern="^check_subscription$"))
+    dp.add_handler(CallbackQueryHandler(profile, pattern="^profile$"))
+    dp.add_handler(CallbackQueryHandler(refer, pattern="^refer$"))
+    dp.add_handler(CallbackQueryHandler(search, pattern="^search$"))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-    print("Bot is running...")
-    
-    # ✅ Async loop ko properly handle karne ke liye
-    asyncio.run(app.run_polling())
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == "__main__":
     main()

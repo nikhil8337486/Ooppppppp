@@ -265,7 +265,7 @@ def main():
     app.add_handler(CallbackQueryHandler(profile, pattern="^profile$"))
     app.add_handler(CallbackQueryHandler(refer, pattern="^refer$"))
     app.add_handler(CallbackQueryHandler(search, pattern="^search$"))
-    app.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     print("Bot is running...")
     app.run_polling()

@@ -83,6 +83,10 @@ def fetch_vehicle_info(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
+    if not message.text:  # Agar text None hai ya empty hai toh error se bacha sakte hain
+        bot.send_message(message.chat.id, "❌ Please send a valid vehicle number!")
+        return
+
     user_id = message.from_user.id
 
     if user_id not in user_credits:

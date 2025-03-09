@@ -195,4 +195,4 @@ def get_vehicle_details(reg_no):
 
 # Start Bot
 print("Bot is running...")
-bot.polling(non_stop=True, timeout=60, long_polling_timeout=60)
+bot.polling(non_stop=True, timeout=90, long_polling_timeout=90)

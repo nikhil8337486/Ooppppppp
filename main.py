@@ -68,26 +68,20 @@ def show_profile(message):
         parse_mode="Markdown",
         reply_markup=main_menu()
     )
-
-# Search Details Button
-@bot.message_handler(func=lambda message: message.text == "🔍 Search Details")
-def ask_vehicle_number_for_search(message):
-    if message.chat.id != ALLOWED_GROUP_ID:
-        return
-
-    bot.send_message(message.chat.id, "🚘 Enter vehicle number (e.g., GJ01KD1255):")
-    bot.register_next_step_handler(message, fetch_vehicle_info)
-
+    
 # Fetch Vehicle Info
+@bot.message_handler(func=lambda message: message.from_user.id in waiting_for_input and bool(message.text))
 def fetch_vehicle_info(message):
-    if message.chat.id != ALLOWED_GROUP_ID:
+    user_id = message.from_user.id
+
+    if message.chat.id != ALLOWED_GROUP_ID or user_id not in waiting_for_input:
         return
 
-    if not message.text:  # Agar text None hai ya empty hai toh error se bacha sakte hain
+    del waiting_for_input[user_id]  # Remove user from waiting list
+
+    if not message.text.strip():  # Check if the message is empty
         bot.send_message(message.chat.id, "❌ Please send a valid vehicle number!")
         return
-
-    user_id = message.from_user.id
 
     if user_id not in user_credits:
         user_credits[user_id] = 60  
@@ -96,7 +90,6 @@ def fetch_vehicle_info(message):
         keyboard = telebot.types.InlineKeyboardMarkup()
         buy_button = telebot.types.InlineKeyboardButton("💳 Buy Credit", url="https://t.me/bjxxjjhbb")
         keyboard.add(buy_button)
-
         bot.send_message(message.chat.id, "❌ You have run out of credits!", reply_markup=keyboard)
         return
 

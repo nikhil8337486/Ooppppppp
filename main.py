@@ -14,6 +14,9 @@ BOT_OWNER_ID = 7394317325
 # User ke credits store karne ke liye
 user_credits = {}
 
+# User sessions dictionary to track per-user search state
+user_sessions = {}
+
 # Reply Keyboard Markup (Buttons)
 def main_menu():
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -69,21 +72,13 @@ def show_profile(message):
         reply_markup=main_menu()
     )
     
-# User sessions dictionary to track per-user search state
-user_sessions = {}
-
+# Search Details Command
 @bot.message_handler(func=lambda message: message.text == "🔍 Search Details")
-def@bot.message_handler(func=lambda message: message.text == "🔍 Search Details")
 def ask_vehicle_number_for_search(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
     user_id = message.from_user.id
-
-    # Check if user is already in a search session
-    if user_id in user_sessions and user_sessions[user_id] == "searching":
-        bot.send_message(message.chat.id, "⚠️ You are already performing a search. Please wait!")
-        return
 
     if user_id not in user_credits:
         user_credits[user_id] = 60  # Default credits
@@ -96,17 +91,18 @@ def ask_vehicle_number_for_search(message):
         bot.send_message(message.chat.id, "❌ You have run out of credits!", reply_markup=keyboard)
         return
 
+    if user_id in user_sessions:
+        bot.send_message(message.chat.id, "❗ You have an ongoing request. Please enter the vehicle number.")
+        return
+
     bot.send_message(message.chat.id, f"🚘 {message.from_user.first_name}, Enter vehicle number (e.g., GJ01KD1255):")
     
-    # Store user state as 'waiting for input'
-    user_sessions[user_id] = "waiting_for_vehicle_number"
+    # Store user state
+    user_sessions[user_id] = {"step": "waiting_for_vehicle_number"}
 
-@bot.message_handler(func=lambda message: message.from_user.id in user_sessions and user_sessions[message.from_user.id] == "waiting_for_vehicle_number")
+@bot.message_handler(func=lambda message: message.from_user.id in user_sessions and user_sessions[message.from_user.id]["step"] == "waiting_for_vehicle_number")
 def fetch_vehicle_info(message):
     user_id = message.from_user.id
-
-    # Immediately remove session to prevent duplicate searches
-    del user_sessions[user_id]
 
     reg_no = message.text.strip().upper()
     if not reg_no:
@@ -126,9 +122,8 @@ def fetch_vehicle_info(message):
 
     bot.send_message(message.chat.id, f"📝 {message.from_user.first_name}, Here are your details:\n\n{details}", reply_markup=main_menu())
 
-    # Clear session after completion
-    if user_id in user_sessions:
-        del user_sessions[user_id]
+    # Remove user session after completion
+    user_sessions.pop(user_id, None)
 # Owner can add credits
 @bot.message_handler(commands=['addcredits'])
 def add_credits(message):

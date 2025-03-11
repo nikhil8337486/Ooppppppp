@@ -69,7 +69,10 @@ def show_profile(message):
         reply_markup=main_menu()
     )
     
-# Fetch Vehicle Info
+# Dictionary to track users waiting for input
+waiting_for_input = {}
+
+# Search Details Button
 @bot.message_handler(func=lambda message: message.from_user.id in waiting_for_input and bool(message.text))
 def fetch_vehicle_info(message):
     user_id = message.from_user.id

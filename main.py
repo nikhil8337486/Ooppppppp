@@ -69,7 +69,9 @@ def show_profile(message):
         reply_markup=main_menu()
     )
     
-# Search Details Button (User Wise)
+# User sessions dictionary to track per-user search state
+user_sessions = {}
+
 @bot.message_handler(func=lambda message: message.text == "🔍 Search Details")
 def ask_vehicle_number_for_search(message):
     if message.chat.id != ALLOWED_GROUP_ID:
@@ -78,7 +80,7 @@ def ask_vehicle_number_for_search(message):
     user_id = message.from_user.id
 
     if user_id not in user_credits:
-        user_credits[user_id] = 60
+        user_credits[user_id] = 60  # Default credits
 
     if user_credits[user_id] < 20:
         keyboard = telebot.types.InlineKeyboardMarkup()
@@ -90,10 +92,9 @@ def ask_vehicle_number_for_search(message):
 
     bot.send_message(message.chat.id, f"🚘 {message.from_user.first_name}, Enter vehicle number (e.g., GJ01KD1255):")
     
-    # Har user ka session alag store karenge
+    # Store user state
     user_sessions[user_id] = {"step": "waiting_for_vehicle_number"}
-# Fetch Vehicle Info (User Wise)
-def fetch_vehicle_info(message, user_id):
+
 @bot.message_handler(func=lambda message: message.from_user.id in user_sessions and user_sessions[message.from_user.id]["step"] == "waiting_for_vehicle_number")
 def fetch_vehicle_info(message):
     user_id = message.from_user.id
@@ -116,7 +117,7 @@ def fetch_vehicle_info(message):
 
     bot.send_message(message.chat.id, f"📝 {message.from_user.first_name}, Here are your details:\n\n{details}", reply_markup=main_menu())
 
-    # User ka session complete hone ke baad remove karna
+    # Remove user session after completion
     del user_sessions[user_id]
 # Owner can add credits
 @bot.message_handler(commands=['addcredits'])

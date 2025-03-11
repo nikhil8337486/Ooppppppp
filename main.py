@@ -79,8 +79,12 @@ def ask_vehicle_number_for_search(message):
 
     user_id = message.from_user.id
 
+    if user_id in user_sessions:
+        bot.send_message(message.chat.id, "⚠️ Please complete your previous search first!")
+        return
+
     if user_id not in user_credits:
-        user_credits[user_id] = 60  # Default credits
+        user_credits[user_id] = 60  
 
     if user_credits[user_id] < 20:
         keyboard = telebot.types.InlineKeyboardMarkup()
@@ -92,12 +96,15 @@ def ask_vehicle_number_for_search(message):
 
     bot.send_message(message.chat.id, f"🚘 {message.from_user.first_name}, Enter vehicle number (e.g., GJ01KD1255):")
     
-    # Store user state
+    # Store user session to prevent multiple searches
     user_sessions[user_id] = {"step": "waiting_for_vehicle_number"}
 
 @bot.message_handler(func=lambda message: message.from_user.id in user_sessions and user_sessions[message.from_user.id]["step"] == "waiting_for_vehicle_number")
 def fetch_vehicle_info(message):
     user_id = message.from_user.id
+
+    # Remove user session immediately to prevent duplicate calls
+    del user_sessions[user_id]
 
     reg_no = message.text.strip().upper()
     if not reg_no:
@@ -113,12 +120,9 @@ def fetch_vehicle_info(message):
     details = get_vehicle_details(reg_no)
 
     if "❌ Vehicle details not found!" not in details:
-        user_credits[user_id] -= 20  # Deduct 20 credits per search
+        user_credits[user_id] -= 20  
 
     bot.send_message(message.chat.id, f"📝 {message.from_user.first_name}, Here are your details:\n\n{details}", reply_markup=main_menu())
-
-    # Remove user session after completion
-    del user_sessions[user_id]
 # Owner can add credits
 @bot.message_handler(commands=['addcredits'])
 def add_credits(message):
@@ -206,4 +210,4 @@ def get_vehicle_details(reg_no):
 
 # Start Bot
 print("Bot is running...")
-bot.polling(non_stop=True, timeout=90, long_polling_timeout=90)
+bot.polling(non_stop=True, timeout=30, long_polling_timeout=30)

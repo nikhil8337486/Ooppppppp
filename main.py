@@ -108,26 +108,116 @@ def fetch_vehicle_info(message):
     if not reg_no:
         bot.send_message(message.chat.id, "❌ Please send a valid vehicle number!")
         return
+import telebot
+import requests
 
-    if user_credits[user_id] < 20:
-        bot.send_message(message.chat.id, "❌ You don't have enough credits!")
+# Bot Token
+BOT_TOKEN = "7738466078:AAH2qHH0PZBLFompWoQBdf7jtpn2XTvRnJI"
+bot = telebot.TeleBot(BOT_TOKEN)
+
+# Allowed Group ID
+ALLOWED_GROUP_ID = -1002320210604  # @RtoVehicle group ID
+
+# Bot Owner ID
+BOT_OWNER_ID = 7394317325  
+
+# User ke credits store karne ke liye
+user_credits = {}
+
+# Reply Keyboard Markup (Buttons)
+def main_menu():
+    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.row("👤 Profile", "🔍 Search Details")
+    return keyboard
+
+# Start Command Handler
+@bot.message_handler(commands=['start'])
+def start_command(message):
+    if message.chat.type == "private" or message.chat.id != ALLOWED_GROUP_ID:
+        bot.send_message(message.chat.id, "❌ This bot works only in @RtoVehicle group!")
+        return
+    bot.send_message(message.chat.id, "✅ Bot is active in @RtoVehicle group!", reply_markup=main_menu())
+
+# Welcome Message for New Members
+@bot.message_handler(content_types=['new_chat_members'])
+def welcome_new_member(message):
+    if message.chat.id != ALLOWED_GROUP_ID:
         return
 
-    # Pehle hi 20 credits deduct kar lo
-    user_credits[user_id] -= 20  
+    for new_user in message.new_chat_members:
+        user_id = new_user.id
+        first_name = new_user.first_name
 
-    bot.send_message(message.chat.id, f"🔍 {message.from_user.first_name}, Fetching details, please wait...")
+        if user_id not in user_credits:
+            user_credits[user_id] = 60  
+
+        bot.send_message(
+            message.chat.id,
+            f"🎉 Welcome, {first_name}! 🚀\n\n"
+            "You have *60 credits* (3 free searches).",
+            parse_mode="Markdown",
+            reply_markup=main_menu()
+        )
+
+# Profile Command
+@bot.message_handler(func=lambda message: message.text == "👤 Profile")
+def show_profile(message):
+    if message.chat.id != ALLOWED_GROUP_ID:
+        return
+
+    user_id = message.from_user.id
+    if user_id not in user_credits:
+        user_credits[user_id] = 60  
+
+    credits = user_credits.get(user_id, 0)
+
+    bot.send_message(
+        message.chat.id,
+        f"👤 *Your Profile*\n"
+        f"💰 Credits: {credits}",
+        parse_mode="Markdown",
+        reply_markup=main_menu()
+    )
+# Store user search states
+user_search_state = {}
+
+@bot.message_handler(func=lambda message: message.text == "🔍 Search Details")
+def ask_vehicle_number_for_search(message):
+    if message.chat.id != ALLOWED_GROUP_ID:
+        return
+
+    user_id = message.from_user.id
+    user_search_state[user_id] = True  # Mark user in search state
+
+    bot.send_message(message.chat.id, "🚘 Enter vehicle number (e.g., GJ01KD1255):")
+    bot.register_next_step_handler(message, fetch_vehicle_info)
+
+# Fetch Vehicle Info
+def fetch_vehicle_info(message):
+    user_id = message.from_user.id
+
+    if message.chat.id != ALLOWED_GROUP_ID or user_id not in user_search_state:
+        return
+
+    del user_search_state[user_id]  # Remove user from search state to avoid conflicts
+
+    if user_id not in user_credits:
+        user_credits[user_id] = 60
+
+    if user_credits[user_id] < 20:
+        keyboard = telebot.types.InlineKeyboardMarkup()
+        buy_button = telebot.types.InlineKeyboardButton("💳 Buy Credit", url="https://t.me/bjxxjjhbb")
+        keyboard.add(buy_button)
+        bot.send_message(message.chat.id, "❌ You have run out of credits!", reply_markup=keyboard)
+        return
+
+    reg_no = message.text.strip().upper()
+    bot.send_message(message.chat.id, "🔍 Fetching details, please wait...")
 
     details = get_vehicle_details(reg_no)
 
-    # Agar vehicle details nahi mili, toh credits wapas kar dena
-    if "❌ Vehicle details not found!" in details:
-        user_credits[user_id] += 20
-
-    bot.send_message(message.chat.id, f"📝 {message.from_user.first_name}, Here are your details:\n\n{details}", reply_markup=main_menu())
-
-    # Remove user session after completion
-    user_sessions.pop(user_id, None)
+    user_credits[user_id] -= 20  # Deduct 20 credits per search
+    bot.send_message(message.chat.id, details, reply_markup=main_menu())
 # Owner can add credits
 @bot.message_handler(commands=['addcredits'])
 def add_credits(message):

@@ -13,6 +13,7 @@ BOT_OWNER_ID = 7394317325
 
 # User ke credits store karne ke liye
 user_credits = {}
+user_search_status = {}  # Yeh naya hai, har user ka search track karega
 
 # Reply Keyboard Markup (Buttons)
 def main_menu():
@@ -75,6 +76,12 @@ def ask_vehicle_number_for_search(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
+    user_id = message.from_user.id
+    if user_id in user_search_status:  # Agar pehle se koi search chalu hai toh roko
+        bot.send_message(message.chat.id, "⏳ Please wait, your previous search is in progress!")
+        return
+    
+    user_search_status[user_id] = True  # Search shuru hone se pehle set karo
     bot.send_message(message.chat.id, "🚘 Enter vehicle number (e.g., GJ01KD1255):")
     bot.register_next_step_handler(message, fetch_vehicle_info)
 
@@ -83,11 +90,14 @@ def fetch_vehicle_info(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
-    if not message.text:  # Agar text None hai ya empty hai toh error se bacha sakte hain
-        bot.send_message(message.chat.id, "❌ Please send a valid vehicle number!")
+    user_id = message.from_user.id
+    if user_id not in user_search_status:  # Agar kisi ne bina button dabaye search likha toh ignore
         return
 
-    user_id = message.from_user.id
+    if not message.text:  
+        bot.send_message(message.chat.id, "❌ Please send a valid vehicle number!")
+        del user_search_status[user_id]  # Search complete karne ke baad hatao
+        return
 
     if user_id not in user_credits:
         user_credits[user_id] = 60  
@@ -98,6 +108,7 @@ def fetch_vehicle_info(message):
         keyboard.add(buy_button)
 
         bot.send_message(message.chat.id, "❌ You have run out of credits!", reply_markup=keyboard)
+        del user_search_status[user_id]  # Search complete karne ke baad hatao
         return
 
     reg_no = message.text.strip().upper()
@@ -107,6 +118,8 @@ def fetch_vehicle_info(message):
 
     user_credits[user_id] -= 20  # Deduct 20 credits per search
     bot.send_message(message.chat.id, details, reply_markup=main_menu())
+    
+    del user_search_status[user_id]  # Search complete hone ke baad hatao
 
 # Owner can add credits
 @bot.message_handler(commands=['addcredits'])
@@ -134,7 +147,6 @@ def add_credits(message):
         bot.send_message(message.chat.id, f"✅ Successfully added {amount} credits to user {user_id}!", reply_markup=main_menu())
     except ValueError:
         bot.send_message(message.chat.id, "❌ Invalid command format! Use: /addcredits <user_id> <amount>")
-
 # Vehicle details fetch function
 def get_vehicle_details(reg_no):
     api_url = f"https://carflow-mocha.vercel.app/api/vehicle?numberPlate={reg_no}"

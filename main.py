@@ -143,7 +143,7 @@ def get_vehicle_details(reg_no):
 
     if response.status_code == 200:
         data = response.json()
-        if data["statusCode"] == 200:
+        if data.get("statusCode") == 200 and "response" in data:
             v = data["response"]
 
             message = (
@@ -188,11 +188,11 @@ def get_vehicle_details(reg_no):
 
                 f"⭒ Powered By: @VEHICLEINFOIND_BOT"
             )
-            return message
+            return message, True  # ✅ Vehicle details mili, toh True return hoga
         else:
-            return "❌ Vehicle details not found!"
+            return "❌ Vehicle details not found!", False  # ❌ Invalid response toh False return hoga
     else:
-        return "❌ API Error! Try again later."
+        return "❌ API Error! Try again later.", False  # ❌ API issue toh bhi False return hoga
 
 # Start Bot
 print("Bot is running...")

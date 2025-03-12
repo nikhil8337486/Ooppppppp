@@ -2,17 +2,18 @@ import telebot
 import requests
 
 # Bot Token
-BOT_TOKEN = "7738466078:AAEej3cy8A1y8edGsR8tb6uuucSc8FWxAt8"
+BOT_TOKEN = "YOUR_BOT_TOKEN"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Allowed Group ID
-ALLOWED_GROUP_ID = -1002320210604  # @RtoVehicle group ID
+ALLOWED_GROUP_ID = -1002320210604  
 
 # Bot Owner ID
 BOT_OWNER_ID = 7394317325  
 
 # User ke credits store karne ke liye
 user_credits = {}
+user_searching = {}  
 
 # Reply Keyboard Markup (Buttons)
 def main_menu():
@@ -27,27 +28,6 @@ def start_command(message):
         bot.send_message(message.chat.id, "❌ This bot works only in @RtoVehicle group!")
         return
     bot.send_message(message.chat.id, "✅ Bot is active in @RtoVehicle group!", reply_markup=main_menu())
-
-# Welcome Message for New Members
-@bot.message_handler(content_types=['new_chat_members'])
-def welcome_new_member(message):
-    if message.chat.id != ALLOWED_GROUP_ID:
-        return
-
-    for new_user in message.new_chat_members:
-        user_id = new_user.id
-        first_name = new_user.first_name
-
-        if user_id not in user_credits:
-            user_credits[user_id] = 60  
-
-        bot.send_message(
-            message.chat.id,
-            f"🎉 Welcome, {first_name}! 🚀\n\n"
-            "You have *60 credits* (3 free searches).",
-            parse_mode="Markdown",
-            reply_markup=main_menu()
-        )
 
 # Profile Command
 @bot.message_handler(func=lambda message: message.text == "👤 Profile")
@@ -75,19 +55,24 @@ def ask_vehicle_number_for_search(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
+    user_id = message.from_user.id
+    if user_searching.get(user_id, False):  
+        bot.send_message(message.chat.id, "⏳ Please wait, your previous search is in progress!")
+        return
+    
+    user_searching[user_id] = True  
     bot.send_message(message.chat.id, "🚘 Enter vehicle number (e.g., GJ01KD1255):")
-    bot.register_next_step_handler(message, fetch_vehicle_info)
+    bot.register_next_step_handler(message, fetch_vehicle_info, user_id)
 
 # Fetch Vehicle Info
-def fetch_vehicle_info(message):
-    if message.chat.id != ALLOWED_GROUP_ID:
+def fetch_vehicle_info(message, user_id):
+    if message.chat.id != ALLOWED_GROUP_ID or not user_searching.get(user_id, False):
         return
 
-    if not message.text:  # Agar text None hai ya empty hai toh error se bacha sakte hain
+    if not message.text:  
         bot.send_message(message.chat.id, "❌ Please send a valid vehicle number!")
+        user_searching[user_id] = False  
         return
-
-    user_id = message.from_user.id
 
     if user_id not in user_credits:
         user_credits[user_id] = 60  
@@ -98,6 +83,7 @@ def fetch_vehicle_info(message):
         keyboard.add(buy_button)
 
         bot.send_message(message.chat.id, "❌ You have run out of credits!", reply_markup=keyboard)
+        user_searching[user_id] = False  
         return
 
     reg_no = message.text.strip().upper()
@@ -105,8 +91,10 @@ def fetch_vehicle_info(message):
 
     details = get_vehicle_details(reg_no)
 
-    user_credits[user_id] -= 20  # Deduct 20 credits per search
+    user_credits[user_id] -= 20  
     bot.send_message(message.chat.id, details, reply_markup=main_menu())
+    
+    user_searching[user_id] = False  
 
 # Owner can add credits
 @bot.message_handler(commands=['addcredits'])

@@ -2,7 +2,7 @@ import telebot
 import requests
 
 # Bot Token
-BOT_TOKEN = "7738466078:AAEej3cy8A1y8edGsR8tb6uuucSc8FWxAt8"
+BOT_TOKEN = "7738466078:AAEej3cy1y8edGsR8tb6uuucSc8FWxAt8"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Allowed Group ID

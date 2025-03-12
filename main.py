@@ -2,7 +2,7 @@ import telebot
 import requests
 
 # Bot Token
-BOT_TOKEN = "7738466078:AAEej3cy8Ay8edGsR8tb6uuucSc8FWxAt8"
+BOT_TOKEN = "7738466078:AAEej3cy8A1y8edGsR8tb6uuucSc8FWxAt8"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Allowed Group ID
@@ -13,9 +13,6 @@ BOT_OWNER_ID = 7394317325
 
 # User ke credits store karne ke liye
 user_credits = {}
-
-# User search session track karne ke liye
-user_search_sessions = {}
 
 # Reply Keyboard Markup (Buttons)
 def main_menu():
@@ -78,16 +75,6 @@ def ask_vehicle_number_for_search(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
-    user_id = message.from_user.id
-
-    # Check if user is already in an active search session
-    if user_search_sessions.get(user_id, False):
-        bot.send_message(message.chat.id, "⚠️ You are already searching for a vehicle! Please wait...")
-        return
-    
-    # Mark user as in search session
-    user_search_sessions[user_id] = True  
-
     bot.send_message(message.chat.id, "🚘 Enter vehicle number (e.g., GJ01KD1255):")
     bot.register_next_step_handler(message, fetch_vehicle_info)
 
@@ -96,12 +83,11 @@ def fetch_vehicle_info(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
-    user_id = message.from_user.id
-
-    if not message.text:  
+    if not message.text:
         bot.send_message(message.chat.id, "❌ Please send a valid vehicle number!")
-        user_search_sessions[user_id] = False  # Free the session
         return
+
+    user_id = message.from_user.id
 
     if user_id not in user_credits:
         user_credits[user_id] = 60  
@@ -112,19 +98,17 @@ def fetch_vehicle_info(message):
         keyboard.add(buy_button)
 
         bot.send_message(message.chat.id, "❌ You have run out of credits!", reply_markup=keyboard)
-        user_search_sessions[user_id] = False  # Free the session
         return
 
     reg_no = message.text.strip().upper()
     bot.send_message(message.chat.id, "🔍 Fetching details, please wait...")
 
-    details = get_vehicle_details(reg_no)
+    details, valid = get_vehicle_details(reg_no)
 
-    user_credits[user_id] -= 20  # Deduct 20 credits per search
+    if valid:
+        user_credits[user_id] -= 20  # ✅ Valid response aane ke baad hi credits deduct honge
+
     bot.send_message(message.chat.id, details, reply_markup=main_menu())
-
-    # Free the user session after search is done
-    user_search_sessions[user_id] = False  
 
 # Owner can add credits
 @bot.message_handler(commands=['addcredits'])

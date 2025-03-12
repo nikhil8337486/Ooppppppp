@@ -113,12 +113,16 @@ def fetch_vehicle_info(message):
         bot.send_message(message.chat.id, "❌ You don't have enough credits!")
         return
 
+    # Pehle hi 20 credits deduct kar lo
+    user_credits[user_id] -= 20  
+
     bot.send_message(message.chat.id, f"🔍 {message.from_user.first_name}, Fetching details, please wait...")
 
     details = get_vehicle_details(reg_no)
 
-    if "❌ Vehicle details not found!" not in details:
-        user_credits[user_id] -= 20  # Deduct 20 credits per search
+    # Agar vehicle details nahi mili, toh credits wapas kar dena
+    if "❌ Vehicle details not found!" in details:
+        user_credits[user_id] += 20
 
     bot.send_message(message.chat.id, f"📝 {message.from_user.first_name}, Here are your details:\n\n{details}", reply_markup=main_menu())
 

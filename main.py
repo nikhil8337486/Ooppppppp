@@ -101,13 +101,12 @@ def fetch_vehicle_info(message):
         return
 
     reg_no = message.text.strip().upper()
-    bot.send_message(chat_id, f"🔍 Fetching details for {reg_no}, please wait...")
+    bot.send_message(message.chat.id, "🔍 Fetching details, please wait...")
+
     details = get_vehicle_details(reg_no)
 
-    if "❌ Vehicle details not found!" not in details and "❌ API Error!" not in details:
-        user_credits[user_id] -= 20  # Deduct 20 credits per search
-
-    bot.send_message(chat_id, details, reply_markup=main_menu())
+    user_credits[user_id] -= 20  # Deduct 20 credits per search
+    bot.send_message(message.chat.id, details, reply_markup=main_menu())
 
 # Owner can add credits
 @bot.message_handler(commands=['addcredits'])

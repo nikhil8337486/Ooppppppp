@@ -2,7 +2,7 @@ import telebot
 import requests
 
 # Bot Token
-BOT_TOKEN = "7738466078:AAFVxfbtaocamGVFy93TCWAy9sQAp8erZQ"
+BOT_TOKEN = "7738466078:AAFVxfbHtaocamGVFy93TCWAy9sQAp8erZQ"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Allowed Group ID
@@ -13,9 +13,6 @@ BOT_OWNER_ID = 7394317325
 
 # User ke credits store karne ke liye
 user_credits = {}
-
-# ✅ Define user_states at the top of your script
-user_states = {}
 
 # Reply Keyboard Markup (Buttons)
 def main_menu():
@@ -73,30 +70,37 @@ def show_profile(message):
     )
 
 # Search Details Button
-# Search Details Button
-# Search Details Button
 @bot.message_handler(func=lambda message: message.text == "🔍 Search Details")
 def ask_vehicle_number_for_search(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
     bot.send_message(message.chat.id, "🚘 Enter vehicle number (e.g., GJ01KD1255):")
-    bot.register_next_step_handler(message, fetch_vehicle_info)  # Fix applied
+    bot.register_next_step_handler(message, fetch_vehicle_info)
 
 # Fetch Vehicle Info
-@bot.message_handler(func=lambda message: message.from_user.id in user_states and user_states[message.from_user.id]["state"] == "awaiting_vehicle_number")
 def fetch_vehicle_info(message):
-    user_id = message.from_user.id
-    chat_id = message.chat.id
+    if message.chat.id != ALLOWED_GROUP_ID:
+        return
 
-    # ✅ Ensure message contains text
-    if not message.text:
-        bot.send_message(chat_id, "❌ Please enter a valid vehicle number (e.g., GJ01KD1255).")
+    if not message.text:  # Agar text None hai ya empty hai toh error se bacha sakte hain
+        bot.send_message(message.chat.id, "❌ Please send a valid vehicle number!")
+        return
+
+    user_id = message.from_user.id
+
+    if user_id not in user_credits:
+        user_credits[user_id] = 60  
+
+    if user_credits[user_id] < 20:
+        keyboard = telebot.types.InlineKeyboardMarkup()
+        buy_button = telebot.types.InlineKeyboardButton("💳 Buy Credit", url="https://t.me/bjxxjjhbb")
+        keyboard.add(buy_button)
+
+        bot.send_message(message.chat.id, "❌ You have run out of credits!", reply_markup=keyboard)
         return
 
     reg_no = message.text.strip().upper()
-
-    # ✅ Continue normal processing
     bot.send_message(chat_id, f"🔍 Fetching details for {reg_no}, please wait...")
     details = get_vehicle_details(reg_no)
 
@@ -105,9 +109,6 @@ def fetch_vehicle_info(message):
 
     bot.send_message(chat_id, details, reply_markup=main_menu())
 
-    # ✅ Check if user_id exists before deleting
-    if user_id in user_states:
-        del user_states[user_id]  # Clear state after search
 # Owner can add credits
 @bot.message_handler(commands=['addcredits'])
 def add_credits(message):
@@ -195,4 +196,4 @@ def get_vehicle_details(reg_no):
 
 # Start Bot
 print("Bot is running...")
-bot.polling()
+bot.polling(non_stop=True, timeout=60, long_polling_timeout=60)

@@ -2,17 +2,20 @@ import telebot
 import requests
 
 # Bot Token
-BOT_TOKEN = "7738466078:AAFVxfbHtacamGVFy93TCWAy9sQAp8erZQ"
+BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Allowed Group ID
 ALLOWED_GROUP_ID = -1002320210604  # @RtoVehicle group ID
 
 # Bot Owner ID
-BOT_OWNER_ID = 7394317325  
+BOT_OWNER_ID = 7394317325
 
-# User ke credits store karne ke liye
+# Users ke credits store karne ke liye
 user_credits = {}
+
+# Active searches dictionary
+active_searches = {}
 
 # Reply Keyboard Markup (Buttons)
 def main_menu():
@@ -28,45 +31,24 @@ def start_command(message):
         return
     bot.send_message(message.chat.id, "✅ Bot is active in @RtoVehicle group!", reply_markup=main_menu())
 
-# Welcome Message for New Members
-@bot.message_handler(content_types=['new_chat_members'])
-def welcome_new_member(message):
-    if message.chat.id != ALLOWED_GROUP_ID:
-        return
-
-    for new_user in message.new_chat_members:
-        user_id = new_user.id
-        first_name = new_user.first_name
-
-        if user_id not in user_credits:
-            user_credits[user_id] = 60  
-
-        bot.send_message(
-            message.chat.id,
-            f"🎉 Welcome, {first_name}! 🚀\n\n"
-            "You have *60 credits* (3 free searches).",
-            parse_mode="Markdown",
-            reply_markup=main_menu()
-        )
-
 # Profile Command
 @bot.message_handler(func=lambda message: message.text == "👤 Profile")
 def show_profile(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
-    user_id = message.from_user.id
-    if user_id not in user_credits:
-        user_credits[user_id] = 60  
+    user_id = message.from_user.id  
+    if user_id not in user_credits:  
+        user_credits[user_id] = 60    
 
-    credits = user_credits.get(user_id, 0)
+    credits = user_credits.get(user_id, 0)  
 
-    bot.send_message(
-        message.chat.id,
+    bot.send_message(  
+        message.chat.id,  
         f"👤 *Your Profile*\n"
-        f"💰 Credits: {credits}",
-        parse_mode="Markdown",
-        reply_markup=main_menu()
+        f"💰 Credits: {credits}",  
+        parse_mode="Markdown",  
+        reply_markup=main_menu()  
     )
 
 # Search Details Button
@@ -75,75 +57,57 @@ def ask_vehicle_number_for_search(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
-    bot.send_message(message.chat.id, "🚘 Enter vehicle number (e.g., GJ01KD1255):")
-    bot.register_next_step_handler(message, fetch_vehicle_info)
+    user_id = message.from_user.id
+    user_name = message.from_user.first_name
+
+    # Store user_id in active searches
+    active_searches[user_id] = True  
+
+    bot.send_message(message.chat.id, f"🔍 {user_name}, Enter vehicle number (e.g., GJ01KD1255):")  
 
 # Fetch Vehicle Info
+@bot.message_handler(func=lambda message: message.from_user.id in active_searches)
 def fetch_vehicle_info(message):
-    if message.chat.id != ALLOWED_GROUP_ID:
-        return
-
-    if not message.text:  # Agar text None hai ya empty hai toh error se bacha sakte hain
-        bot.send_message(message.chat.id, "❌ Please send a valid vehicle number!")
-        return
-
     user_id = message.from_user.id
+    user_name = message.from_user.first_name
 
-    if user_id not in user_credits:
-        user_credits[user_id] = 60  
+    if message.chat.id != ALLOWED_GROUP_ID:
+        return  
 
-    if user_credits[user_id] < 20:
-        keyboard = telebot.types.InlineKeyboardMarkup()
-        buy_button = telebot.types.InlineKeyboardButton("💳 Buy Credit", url="https://t.me/bjxxjjhbb")
-        keyboard.add(buy_button)
+    if not message.text:  
+        bot.send_message(message.chat.id, "❌ Please send a valid vehicle number!")  
+        return  
 
-        bot.send_message(message.chat.id, "❌ You have run out of credits!", reply_markup=keyboard)
-        return
+    if user_id not in user_credits:  
+        user_credits[user_id] = 60    
 
-    reg_no = message.text.strip().upper()
-    bot.send_message(message.chat.id, "🔍 Fetching details, please wait...")
+    if user_credits[user_id] < 20:  
+        keyboard = telebot.types.InlineKeyboardMarkup()  
+        buy_button = telebot.types.InlineKeyboardButton("💳 Buy Credit", url="https://t.me/bjxxjjhbb")  
+        keyboard.add(buy_button)  
+        bot.send_message(message.chat.id, "❌ You have run out of credits!", reply_markup=keyboard)  
+        return  
 
-    details = get_vehicle_details(reg_no)
+    reg_no = message.text.strip().upper()  
+    bot.send_message(message.chat.id, f"🔍 {user_name}, Fetching details, please wait...")  
 
-    user_credits[user_id] -= 20  # Deduct 20 credits per search
+    details = get_vehicle_details(reg_no)  
+
+    user_credits[user_id] -= 20  # Deduct 20 credits per search  
     bot.send_message(message.chat.id, details, reply_markup=main_menu())
 
-# Owner can add credits
-@bot.message_handler(commands=['addcredits'])
-def add_credits(message):
-    if message.chat.id != ALLOWED_GROUP_ID:
-        return
-
-    if message.from_user.id != BOT_OWNER_ID:
-        bot.send_message(message.chat.id, "❌ You are not authorized to use this command!")
-        return
-
-    try:
-        command_parts = message.text.split()
-        if len(command_parts) != 3:
-            bot.send_message(message.chat.id, "❌ Usage: /addcredits <user_id> <amount>")
-            return
-
-        user_id = int(command_parts[1])
-        amount = int(command_parts[2])
-
-        if user_id not in user_credits:
-            user_credits[user_id] = 60  
-
-        user_credits[user_id] += amount
-        bot.send_message(message.chat.id, f"✅ Successfully added {amount} credits to user {user_id}!", reply_markup=main_menu())
-    except ValueError:
-        bot.send_message(message.chat.id, "❌ Invalid command format! Use: /addcredits <user_id> <amount>")
+    # Remove user from active searches after successful search
+    del active_searches[user_id]
 
 # Vehicle details fetch function
 def get_vehicle_details(reg_no):
     api_url = f"https://carflow-mocha.vercel.app/api/vehicle?numberPlate={reg_no}"
     response = requests.get(api_url)
 
-    if response.status_code == 200:
-        data = response.json()
-        if data["statusCode"] == 200:
-            v = data["response"]
+    if response.status_code == 200:  
+        data = response.json()  
+        if data["statusCode"] == 200:  
+            v = data["response"]  
 
             message = (
                 f"🚗 *Vehicle Information*\n\n"
@@ -186,13 +150,39 @@ def get_vehicle_details(reg_no):
                 f"➤ Last Updated: {v.get('lmDate', 'N/A')}\n\n"
 
                 f"⭒ Powered By: @VEHICLEINFOIND_BOT"
-            )
-            return message
-        else:
-            return "❌ Vehicle details not found!"
-    else:
+            )  
+            return message  
+        else:  
+            return "❌ Vehicle details not found!"  
+    else:  
         return "❌ API Error! Try again later."
+        
+# Add Credits Command (Only for Bot Owner)
+@bot.message_handler(commands=['addcredits'])
+def add_credits(message):
+    if message.from_user.id != BOT_OWNER_ID:
+        bot.reply_to(message, "❌ You are not authorized to use this command!")
+        return
+
+    try:
+        command_parts = message.text.split()
+        if len(command_parts) != 3:
+            bot.reply_to(message, "⚠️ Usage: `/addcredits <user_id> <amount>`", parse_mode="Markdown")
+            return
+
+        user_id = int(command_parts[1])
+        amount = int(command_parts[2])
+
+        if user_id not in user_credits:
+            user_credits[user_id] = 60  # Default credits if user is new
+
+        user_credits[user_id] += amount
+
+        bot.reply_to(message, f"✅ Added {amount} credits to user {user_id}.\nTotal Credits: {user_credits[user_id]}")
+    
+    except ValueError:
+        bot.reply_to(message, "❌ Invalid format! Use `/addcredits <user_id> <amount>`", parse_mode="Markdown")
 
 # Start Bot
 print("Bot is running...")
-bot.polling(non_stop=True, timeout=60, long_polling_timeout=60)
+bot.polling(non_stop=True, timeout=90, long_polling_timeout=90)

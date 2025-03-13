@@ -135,21 +135,25 @@ def fetch_vehicle_details(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
+    # Ensure state reset
+    if user_id in user_search_state:
+        del user_search_state[user_id]
+
     credits = get_user_credits(user_id)
     if credits < 20:
-        bot.send_message(message.chat.id, "❌ You don't have enough credits!")
+        bot.send_message(message.chat.id, "❌ You have run out of credits!")
         return
 
-    # Deduct credits and send message with username
     update_credits(user_id, credits - 20)
     bot.send_message(message.chat.id, f"🔍 *{user_name}*, fetching details for *{reg_no}*, please wait...", parse_mode="Markdown")
 
     details = get_vehicle_details(reg_no)
+    print(details)  # Debugging
 
     if "Vehicle details not found" not in details:
         bot.send_message(message.chat.id, f"🔍 *{user_name}*\n{details}", parse_mode="Markdown")
     else:
-        bot.send_message(message.chat.id, f"❌ *{user_name}*, vehicle details not found!", parse_mode="Markdown")
+        bot.send_message(message.chat.id, "❌ Vehicle Not Found!", parse_mode="Markdown")
 
     # Remove user from search state
     user_search_state.pop(user_id, None)

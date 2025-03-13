@@ -81,31 +81,27 @@ def ask_vehicle_number_for_search(message):
     bot.register_next_step_handler(message, fetch_vehicle_info)  # Fix applied
 
 # Fetch Vehicle Info
+@bot.message_handler(func=lambda message: message.from_user.id in user_states and user_states[message.from_user.id]["state"] == "awaiting_vehicle_number")
 def fetch_vehicle_info(message):
     user_id = message.from_user.id
     chat_id = message.chat.id
 
-    if user_id not in user_credits:
-        user_credits[user_id] = 60  # Default credits
-
-    if user_credits[user_id] < 20:
-        keyboard = telebot.types.InlineKeyboardMarkup()
-        buy_button = telebot.types.InlineKeyboardButton("💳 Buy Credit", url="https://t.me/bjxxjjhbb")
-        keyboard.add(buy_button)
-
-        bot.send_message(chat_id, "❌ You have run out of credits!", reply_markup=keyboard)
+    # ✅ Ensure message contains text
+    if not message.text:
+        bot.send_message(chat_id, "❌ Please enter a valid vehicle number (e.g., GJ01KD1255).")
         return
 
     reg_no = message.text.strip().upper()
-    bot.send_message(chat_id, "🔍 Fetching details, please wait...")
 
+    # ✅ Continue normal processing
+    bot.send_message(chat_id, f"🔍 Fetching details for {reg_no}, please wait...")
     details = get_vehicle_details(reg_no)
 
-    # Agar response valid hai tabhi credits deduct honge
     if "❌ Vehicle details not found!" not in details and "❌ API Error!" not in details:
         user_credits[user_id] -= 20  # Deduct 20 credits per search
 
     bot.send_message(chat_id, details, reply_markup=main_menu())
+    del user_states[user_id]  # Clear state after search
 
 # Owner can add credits
 @bot.message_handler(commands=['addcredits'])

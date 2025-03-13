@@ -28,21 +28,42 @@ conn.commit()
 
 # Function to get user credits
 def get_user_credits(user_id):
-    """Retrieve the user's credit balance from the database."""
-    conn = sqlite3.connect("users.db")  # Ensure the database connection is established
-    cursor = conn.cursor()  # Always create a new cursor for each query
+    """Retrieve the user's credit balance from the database. If the user doesn't exist, add them with 60 credits."""
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
 
+    # Check if user exists
     cursor.execute("SELECT credits FROM users WHERE user_id = ?", (user_id,))
     result = cursor.fetchone()
 
-    conn.close()  # Close the connection after fetching data
+    if result is None:
+        # Insert new user with default 60 credits
+        cursor.execute("INSERT INTO users (user_id, credits) VALUES (?, ?)", (user_id, 60))
+        conn.commit()
+        conn.close()
+        return 60  # Return default 60 credits
 
-    return result[0] if result else 0  # Return credits or default to 0
+    conn.close()
+    return result[0]  # Return existing credits
 
 # Function to update user credits
 def update_credits(user_id, amount):
-    cursor.execute("UPDATE users SET credits = ? WHERE user_id=?", (amount, user_id))
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+
+    # Check if user exists
+    cursor.execute("SELECT credits FROM users WHERE user_id = ?", (user_id,))
+    result = cursor.fetchone()
+
+    if result is None:
+        # If user doesn't exist, insert with the new amount
+        cursor.execute("INSERT INTO users (user_id, credits) VALUES (?, ?)", (user_id, amount))
+    else:
+        # Otherwise, update the user's credits
+        cursor.execute("UPDATE users SET credits = ? WHERE user_id=?", (amount, user_id))
+
     conn.commit()
+    conn.close()
 
 # Start Command Handler
 @bot.message_handler(commands=['start'])
@@ -209,16 +230,25 @@ def add_credits(message):
             bot.reply_to(message, "⚠️ Usage: `/addcredits <user_id> <amount>`", parse_mode="Markdown")
             return
 
-        user_id = int(command_parts[1])
-        amount = int(command_parts[2])
+        user_id = int(command_parts[1])  # Extract user ID
+        amount = int(command_parts[2])  # Extract amount to add
 
         current_credits = get_user_credits(user_id)
-        update_credits(user_id, current_credits + amount)
+        new_credits = current_credits + amount  # Add new credits
 
-        bot.reply_to(message, f"✅ Added {amount} credits to user {user_id}.\nTotal Credits: {current_credits + amount}")
+        update_credits(user_id, new_credits)  # Update in database
+
+        bot.send_message(
+            message.chat.id,  # Use `message.chat.id`, not `message.chat.id.message_id`
+            f"✅ Added {amount} credits to user {user_id}.\n💰 Total Credits: {new_credits}",
+            parse_mode="Markdown"
+        )
 
     except ValueError:
-        bot.reply_to(message, "❌ Invalid format! Use `/addcredits <user_id> <amount>`", parse_mode="Markdown")
+        bot.send_message(message.chat.id, "❌ Invalid format! Use: `/addcredits <user_id> <amount>`", parse_mode="Markdown")
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"⚠️ Error: {str(e)}")
 
 # Start polling
 print("Bot is running...")

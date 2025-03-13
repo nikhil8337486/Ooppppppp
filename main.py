@@ -14,6 +14,9 @@ BOT_OWNER_ID = 7394317325
 # User ke credits store karne ke liye
 user_credits = {}
 
+# ✅ Define user_states at the top of your script
+user_states = {}
+
 # Reply Keyboard Markup (Buttons)
 def main_menu():
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -101,8 +104,10 @@ def fetch_vehicle_info(message):
         user_credits[user_id] -= 20  # Deduct 20 credits per search
 
     bot.send_message(chat_id, details, reply_markup=main_menu())
-    del user_states[user_id]  # Clear state after search
 
+    # ✅ Check if user_id exists before deleting
+    if user_id in user_states:
+        del user_states[user_id]  # Clear state after search
 # Owner can add credits
 @bot.message_handler(commands=['addcredits'])
 def add_credits(message):

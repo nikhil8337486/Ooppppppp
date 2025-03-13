@@ -2,7 +2,7 @@ import telebot
 import requests
 
 # Bot Token
-BOT_TOKEN = "7738466078:AAEej3cy8A1y8edGsR8tb6uuucSc8FWxAt8"
+BOT_TOKEN = "7738466078:AAFVxfbHtaocamGVFy93TCWAy9sQAp8erZQ"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Allowed Group ID
@@ -83,10 +83,6 @@ def fetch_vehicle_info(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
-    if not message.text:
-        bot.send_message(message.chat.id, "❌ Please send a valid vehicle number!")
-        return
-
     user_id = message.from_user.id
 
     if user_id not in user_credits:
@@ -103,11 +99,9 @@ def fetch_vehicle_info(message):
     reg_no = message.text.strip().upper()
     bot.send_message(message.chat.id, "🔍 Fetching details, please wait...")
 
-    details, valid = get_vehicle_details(reg_no)
+    details = get_vehicle_details(reg_no)
 
-    if valid:
-        user_credits[user_id] -= 20  # ✅ Valid response aane ke baad hi credits deduct honge
-
+    user_credits[user_id] -= 20  # Deduct 20 credits per search
     bot.send_message(message.chat.id, details, reply_markup=main_menu())
 
 # Owner can add credits
@@ -136,6 +130,7 @@ def add_credits(message):
         bot.send_message(message.chat.id, f"✅ Successfully added {amount} credits to user {user_id}!", reply_markup=main_menu())
     except ValueError:
         bot.send_message(message.chat.id, "❌ Invalid command format! Use: /addcredits <user_id> <amount>")
+
 # Vehicle details fetch function
 def get_vehicle_details(reg_no):
     api_url = f"https://carflow-mocha.vercel.app/api/vehicle?numberPlate={reg_no}"
@@ -143,7 +138,7 @@ def get_vehicle_details(reg_no):
 
     if response.status_code == 200:
         data = response.json()
-        if data.get("statusCode") == 200 and "response" in data:
+        if data["statusCode"] == 200:
             v = data["response"]
 
             message = (
@@ -188,12 +183,12 @@ def get_vehicle_details(reg_no):
 
                 f"⭒ Powered By: @VEHICLEINFOIND_BOT"
             )
-            return message, True  # ✅ Vehicle details mili, toh True return hoga
+            return message
         else:
-            return "❌ Vehicle details not found!", False  # ❌ Invalid response toh False return hoga
+            return "❌ Vehicle details not found!"
     else:
-        return "❌ API Error! Try again later.", False  # ❌ API issue toh bhi False return hoga
+        return "❌ API Error! Try again later."
 
 # Start Bot
 print("Bot is running...")
-bot.polling(non_stop=True, timeout=60, long_polling_timeout=60)
+bot.polling()

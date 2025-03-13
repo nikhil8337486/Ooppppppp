@@ -70,39 +70,42 @@ def show_profile(message):
     )
 
 # Search Details Button
+# Search Details Button
+# Search Details Button
 @bot.message_handler(func=lambda message: message.text == "🔍 Search Details")
 def ask_vehicle_number_for_search(message):
     if message.chat.id != ALLOWED_GROUP_ID:
         return
 
     bot.send_message(message.chat.id, "🚘 Enter vehicle number (e.g., GJ01KD1255):")
-    bot.register_next_step_handler(message, fetch_vehicle_info)
+    bot.register_next_step_handler(message, fetch_vehicle_info)  # Fix applied
 
 # Fetch Vehicle Info
 def fetch_vehicle_info(message):
-    if message.chat.id != ALLOWED_GROUP_ID:
-        return
-
     user_id = message.from_user.id
+    chat_id = message.chat.id
 
     if user_id not in user_credits:
-        user_credits[user_id] = 60  
+        user_credits[user_id] = 60  # Default credits
 
     if user_credits[user_id] < 20:
         keyboard = telebot.types.InlineKeyboardMarkup()
         buy_button = telebot.types.InlineKeyboardButton("💳 Buy Credit", url="https://t.me/bjxxjjhbb")
         keyboard.add(buy_button)
 
-        bot.send_message(message.chat.id, "❌ You have run out of credits!", reply_markup=keyboard)
+        bot.send_message(chat_id, "❌ You have run out of credits!", reply_markup=keyboard)
         return
 
     reg_no = message.text.strip().upper()
-    bot.send_message(message.chat.id, "🔍 Fetching details, please wait...")
+    bot.send_message(chat_id, "🔍 Fetching details, please wait...")
 
     details = get_vehicle_details(reg_no)
 
-    user_credits[user_id] -= 20  # Deduct 20 credits per search
-    bot.send_message(message.chat.id, details, reply_markup=main_menu())
+    # Agar response valid hai tabhi credits deduct honge
+    if "❌ Vehicle details not found!" not in details and "❌ API Error!" not in details:
+        user_credits[user_id] -= 20  # Deduct 20 credits per search
+
+    bot.send_message(chat_id, details, reply_markup=main_menu())
 
 # Owner can add credits
 @bot.message_handler(commands=['addcredits'])

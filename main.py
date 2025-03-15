@@ -4,7 +4,7 @@ import requests
 import asyncio  
 
 # Bot Token, Group ID & Channel Username
-BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
+BOT_TOKEN = "YOUR_BOT_TOKEN"
 GROUP_ID = -1001234567890  
 CHANNEL_USERNAME = "@BOTS_OSINTT"
 
@@ -88,7 +88,8 @@ async def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_vehicle))
 
     print("Bot is running...")
-    await application.run_polling()  # ✅ FIX: Thread ke bina directly asyncio me run
+    await application.run_polling()  # ✅ FIX: Async function directly asyncio loop me run
 
 if __name__ == "__main__":
-    asyncio.run(main())  # ✅ FIX: Async function ko seedha asyncio loop me chalao
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())  # ✅ Fix: `asyncio.run()` ki jagah ye use karo

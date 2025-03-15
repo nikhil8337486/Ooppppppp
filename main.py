@@ -1,11 +1,12 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import requests
-import threading  # ✅ Fix: Threading use karenge
+import threading  
+import asyncio  
 
 # Bot Token, Group ID & Channel Username
 BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
-GROUP_ID = -1001234567890  # Aapke group ka ID
+GROUP_ID = -1001234567890  
 CHANNEL_USERNAME = "@BOTS_OSINTT"
 
 async def is_member(user_id, application):
@@ -83,14 +84,16 @@ async def search_vehicle(update: Update, context: CallbackContext):
         await update.message.reply_text("No details found or invalid vehicle number.")
 
 def run_bot():
+    asyncio.set_event_loop(asyncio.new_event_loop())  # ✅ Fix: Naya event loop banao
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_vehicle))
 
     print("Bot is running...")
-    application.run_polling()  # ✅ Thread me run karenge
+    application.run_polling()
 
-# ✅ Fix: Streamlit ke saath thread me run karna hoga
+# ✅ Fix: Thread ke andar proper event loop banana zaroori hai
 if __name__ == "__main__":
-    bot_thread = threading.Thread(target=run_bot)  # Thread start karo
+    bot_thread = threading.Thread(target=run_bot, daemon=True)  
     bot_thread.start()
+    bot_thread.join()  # Process ko alive rakhne ke liye

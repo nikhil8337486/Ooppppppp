@@ -9,7 +9,7 @@ GROUP_ID = -1002320210604  # Replace with your actual group ID
 bot = telebot.TeleBot(BOT_TOKEN)
 
 def fetch_vehicle_details(plate_number):
-    url = f"https://car.app/api/vehicle?numberPlate={plate_number}"
+    url = f"https://carflow-mocha.vercel.app/api/vehicle?numberPlate={plate_number}"
     response = requests.get(url)
 
     if response.status_code == 200:

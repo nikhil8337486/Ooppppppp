@@ -1,259 +1,109 @@
-import sqlite3
 import telebot
 import requests
-import re  # Import this at the top
 
-# Bot Token
+# Replace with your bot token and group ID
 BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
+GROUP_ID = -1002320210604  # Replace with your actual group ID
+
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Allowed Group ID
-ALLOWED_GROUP_ID = -1002320210604
-
-# Bot Owner ID
-BOT_OWNER_ID = 7394317325
-
-# User search state tracking
-user_search_state = {}  # Keeps track of users currently searching
-
-# Database setup
-conn = sqlite3.connect("users.db", check_same_thread=False)
-cursor = conn.cursor()
-
-# Create Table If Not Exists
-cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-                    user_id INTEGER PRIMARY KEY,
-                    credits INTEGER DEFAULT 60)''')
-conn.commit()
-
-# Function to get user credits
-def get_user_credits(user_id):
-    """Retrieve the user's credit balance from the database. If the user doesn't exist, add them with 60 credits."""
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-
-    # Check if user exists
-    cursor.execute("SELECT credits FROM users WHERE user_id = ?", (user_id,))
-    result = cursor.fetchone()
-
-    if result is None:
-        # Insert new user with default 60 credits
-        cursor.execute("INSERT INTO users (user_id, credits) VALUES (?, ?)", (user_id, 60))
-        conn.commit()
-        conn.close()
-        return 60  # Return default 60 credits
-
-    conn.close()
-    return result[0]  # Return existing credits
-
-# Function to update user credits
-def update_credits(user_id, amount):
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-
-    # Check if user exists
-    cursor.execute("SELECT credits FROM users WHERE user_id = ?", (user_id,))
-    result = cursor.fetchone()
-
-    if result is None:
-        # If user doesn't exist, insert with the new amount
-        cursor.execute("INSERT INTO users (user_id, credits) VALUES (?, ?)", (user_id, amount))
-    else:
-        # Otherwise, update the user's credits
-        cursor.execute("UPDATE users SET credits = ? WHERE user_id=?", (amount, user_id))
-
-    conn.commit()
-    conn.close()
-
-# Start Command Handler
-@bot.message_handler(commands=['start'])
-def start_command(message):
-    if message.chat.type == "private" or message.chat.id != ALLOWED_GROUP_ID:
-        bot.send_message(message.chat.id, "❌ This bot works only in @RtoVehicle group")
-        return
+def fetch_vehicle_details(plate_number):
+    url = f"https://carflow-mocha.vercel.app/api/vehicle?numberPlate={plate_number}"
+    response = requests.get(url)
     
-    user_id = message.chat.id
-    get_user_credits(user_id)  # Ensure user exists
-    bot.send_message(message.chat.id, "Welcome! Use the buttons below.", reply_markup=main_menu())
-
-# Function to create main menu buttons
-def main_menu():
-    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    profile_button = telebot.types.KeyboardButton("👤 Profile")
-    search_button = telebot.types.KeyboardButton("🔍 Search Details")
-    keyboard.add(profile_button, search_button)
-    return keyboard
-
-# Profile Command
-@bot.message_handler(func=lambda message: message.text == "👤 Profile")
-def show_profile(message):
-    if message.chat.id != ALLOWED_GROUP_ID:
-        return
-
-    user_id = message.from_user.id
-    credits = get_user_credits(user_id)
-
-    bot.send_message(
-        message.chat.id,
-        f"👤 *Your Profile*\n"
-        f"💰 Credits: {credits}",
-        parse_mode="Markdown",
-        reply_markup=main_menu()
-    )
-
-# Dictionary to track user search states
-user_search_state = {}
-
-# Search Details Button
-@bot.message_handler(func=lambda message: message.text == "🔍 Search Details")
-def ask_vehicle_number_for_search(message):
-    if message.chat.id != ALLOWED_GROUP_ID:
-        return
-
-    user_id = message.from_user.id
-    user_name = message.from_user.first_name
-
-    credits = get_user_credits(user_id)
-    if credits < 20:
-        keyboard = telebot.types.InlineKeyboardMarkup()
-        buy_button = telebot.types.InlineKeyboardButton("💳 Buy Credit", url="https://t.me/bjxxjjhbb")
-        keyboard.add(buy_button)
-        bot.send_message(message.chat.id, "❌ You have run out of credits!", reply_markup=keyboard)
-        return
-
-    user_search_state[user_id] = True  # Track user search state
-
-    bot.send_message(message.chat.id, f"🔍 *{user_name}, enter vehicle number (e.g., GJ01KD1255):*", parse_mode="Markdown")
-
-# Search Vehicle Details
-@bot.message_handler(func=lambda message: message.from_user.id in user_search_state)
-def fetch_vehicle_details(message):
-    user_id = message.from_user.id
-    user_name = message.from_user.first_name
-    reg_no = message.text.strip()
-
-    if message.chat.id != ALLOWED_GROUP_ID:
-        return
-
-    # Ensure state reset
-    if user_id in user_search_state:
-        del user_search_state[user_id]
-
-    credits = get_user_credits(user_id)
-    if credits < 20:
-        bot.send_message(message.chat.id, "❌ You have run out of credits!")
-        return
-
-    update_credits(user_id, credits - 20)
-    bot.send_message(message.chat.id, f"🔍 *{user_name}*, fetching details for *{reg_no}*, please wait...", parse_mode="Markdown")
-
-    details = get_vehicle_details(reg_no)
-    print(details)  # Debugging
-
-    if "Vehicle details not found" not in details:
-        bot.send_message(message.chat.id, f"🔍 *{user_name}*\n{details}", parse_mode="Markdown")
-    else:
-        bot.send_message(message.chat.id, "❌ Vehicle Not Found!", parse_mode="Markdown")
-
-    # Remove user from search state
-    user_search_state.pop(user_id, None)
-
-def escape_markdown(text):
-    """Escape Telegram Markdown special characters."""
-    escape_chars = r'_*()~`>#+-=|{}.!'
-    return re.sub(r'([%s])' % re.escape(escape_chars), r'\\\1', text)
-
-def get_vehicle_details(reg_no):
-    api_url = f"https://carflow-mocha.vercel.app/api/vehicle?numberPlate={reg_no}"
-    response = requests.get(api_url)
-
     if response.status_code == 200:
-        data = response.json()
-        if data["statusCode"] == 200:
-            v = data["response"]
+        data = response.json().get("response")
+        if data:  # Check if response contains data
+            return format_vehicle_details(data)
+    
+    return "🚫 Vehicle details not found. Please check the number and try again."
 
-            message = (
-                f"🚗 *Vehicle Information*\n\n"
-                f"🔹 *Registration Details*\n"
-                f"➤ Registration Number: {v.get('regNo', 'N/A')}\n"
-                f"➤ RTO Code: {v.get('rtoCode', 'N/A')}\n"
-                f"➤ Registration Authority: {v.get('regAuthority', 'N/A')}\n"
-                f"➤ Registration Date: {v.get('regDate', 'N/A')}\n\n"
+def format_vehicle_details(data):
+    financed_status = "Yes" if data.get("financerName") and data["financerName"].lower() != "on cash" else "No"
+    rc_status = data.get("status", "N/A")
 
-                f"🔹 *Vehicle Specifications*\n"
-                f"➤ Vehicle Class: {v.get('vehicleClass', 'N/A')}\n"
-                f"➤ Manufacturer: {v.get('manufacturer', 'N/A')}\n"
-                f"➤ Model: {v.get('vehicle', 'N/A')} ({v.get('variant', 'N/A')})\n"
-                f"➤ Fuel Type: {v.get('fuelType', 'N/A')}\n"
-                f"➤ Cubic Capacity: {v.get('cubicCapacity', 'N/A')} cc\n"
-                f"➤ Vehicle Type: {v.get('vehicleType', 'N/A')}\n"
-                f"➤ Seat Capacity: {v.get('seatCapacity', 'N/A')}\n"
-                f"➤ Commercial Vehicle: {'Yes' if v.get('isCommercial') else 'No'}\n\n"
+    return f"""
+━━━━━━━━━━━━━━━━━━━━━━
+   🚗 VEHICLE DETAILS
+━━━━━━━━━━━━━━━━━━━━━━
+🔹 Registration Number: {data.get("regNo", "N/A")}
+🔹 Registration Authority: {data.get("regAuthority", "N/A")}
+🔹 Registration Date: {data.get("regDate", "N/A")}
+🔹 Owner Name: {data.get("owner", "N/A")}
+🔹 Father's Name: {data.get("ownerFatherName", "N/A")}
+🔹 Address: {data.get("presentAddress", "N/A")}
 
-                f"🔹 *Owner Information*\n"
-                f"➤ Owner Name: {v.get('owner', 'N/A')}\n"
-                f"➤ Father's Name: {v.get('ownerFatherName', 'N/A')}\n"
-                f"➤ Permanent Address: {v.get('permAddress', 'N/A')}\n"
-                f"➤ Pincode: {v.get('pincode', 'N/A')}\n\n"
+━━━━━━━━━━━━━━━━━━━━━━
+   🚘 VEHICLE SPECIFICATIONS
+━━━━━━━━━━━━━━━━━━━━━━
+🛠 Manufacturer: {data.get("manufacturer", "N/A")}
+🚘 Model: {data.get("vehicle", "N/A")}
+📌 Variant: {data.get("variant", "N/A")}
+⛽ Fuel Type: {data.get("fuelType", "N/A")}
+🪑 Seat Capacity: {data.get("seatCapacity", "N/A")}
 
-                f"🔹 *Financial & Insurance Details*\n"
-                f"➤ Financer Name: {v.get('financerName', 'N/A')}\n"
-                f"➤ Insurance Company: {v.get('insuranceCompanyName', 'N/A')}\n"
-                f"➤ Insurance Validity: {v.get('insuranceUpto', 'N/A')}\n"
-                f"➤ Insurance Expired: {'Yes' if v.get('insuranceExpired') else 'No'}\n\n"
+━━━━━━━━━━━━━━━━━━━━━━
+   ⚙️ TECHNICAL DETAILS
+━━━━━━━━━━━━━━━━━━━━━━
+🔧 Chassis Number: {data.get("chassis", "N/A")}
+🔧 Engine Number: {data.get("engine", "N/A")}
+📏 Cubic Capacity: {data.get("cubicCapacity", "N/A")} cc
 
-                f"🔹 *PUC Details*\n"
-                f"➤ PUCC Number: {v.get('puccNumber', 'N/A')}\n"
-                f"➤ PUCC Validity: {v.get('puccValidUpto', 'N/A')}\n\n"
+━━━━━━━━━━━━━━━━━━━━━━
+   📑 REGISTRATION & INSURANCE
+━━━━━━━━━━━━━━━━━━━━━━
+🛡 Insurance Company: {data.get("insuranceCompanyName", "N/A")}
+🔖 Policy Number: {data.get("insurancePolicyNumber", "N/A")}
+📆 Insurance Valid Till: {data.get("insuranceUpto", "N/A")}
 
-                f"🔹 *Additional Information*\n"
-                f"➤ Chassis Number: {v.get('chassis', 'N/A')}\n"
-                f"➤ Engine Number: {v.get('engine', 'N/A')}\n"
-                f"➤ Data Status: {v.get('dataStatus', 'N/A')}\n"
-                f"➤ Last Updated: {v.get('lmDate', 'N/A')}\n\n"
+━━━━━━━━━━━━━━━━━━━━━━
+   💰 FINANCER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━
+🏦 Financer: {data.get("financerName", "N/A")}
+💵 Financed: {financed_status}
 
-                f"⭒ Powered By: @VEHICLEINFOIND_BOT"
-            )
+━━━━━━━━━━━━━━━━━━━━━━
+   📍 OTHER INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━
+🏭 Manufacturing Year: {data.get("manufacturerYear", "N/A")}
+📌 Pincode: {data.get("pincode", "N/A")}
+🕒 Last Updated: {data.get("lmDate", "N/A")}
+📅 Data Status: {data.get("dataStatus", "N/A")}
+📜 Transaction Key: {data.get("transKey", "N/A")}
+🛞 Vehicle Type: {data.get("vehicleType", "N/A")}
+🏢 RTO Code: {data.get("rtoCode", "N/A")}
+📅 Emission Date: {data.get("eDate", "N/A")}
 
-            return escape_markdown(message)  # ✅ Use the escape function
-        else:
-            return "❌ Vehicle Not Found!"
+━━━━━━━━━━━━━━━━━━━━━━
+   📢 STATUS
+━━━━━━━━━━━━━━━━━━━━━━
+✅ RC Status: Y
+🕒 Last Updated: {data.get("lmDate", "N/A")}
+
+━━━━━━━━━━━━━━━━━━━━━━
+⭒ Powered By: @VEHICLEINFOIND_BOT
+━━━━━━━━━━━━━━━━━━━━━━
+"""
+
+@bot.message_handler(commands=['start'])
+def start(message):
+    if message.chat.type == "private":
+        bot.reply_to(message, "❌ This bot works only in @RtoVehicle group.")
     else:
-        return "❌ API Error! Try again later."
-        
-# Add Credits Command (Only for Bot Owner)
-@bot.message_handler(commands=['addcredits'])
-def add_credits(message):
-    if message.from_user.id != BOT_OWNER_ID:
-        bot.reply_to(message, "❌ You are not authorized to use this command!")
+        bot.reply_to(message, "Send a vehicle number to get details.")
+
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    if message.chat.id != GROUP_ID:
+        bot.reply_to(message, "❌ This bot works only in @RtoVehicle group.")
         return
 
-    try:
-        command_parts = message.text.split()
-        if len(command_parts) != 3:
-            bot.reply_to(message, "⚠️ Usage: `/addcredits <user_id> <amount>`", parse_mode="Markdown")
-            return
+    plate_number = message.text.strip().upper()
+    
+    if len(plate_number) > 7:  # Basic check for vehicle number format
+        details = fetch_vehicle_details(plate_number)
+        bot.reply_to(message, details)
+    else:
+        bot.reply_to(message, "🚫 Please enter a valid vehicle number.")
 
-        user_id = int(command_parts[1])  # Extract user ID
-        amount = int(command_parts[2])  # Extract amount to add
-
-        current_credits = get_user_credits(user_id)
-        new_credits = current_credits + amount  # Add new credits
-
-        update_credits(user_id, new_credits)  # Update in database
-
-        bot.send_message(
-            message.chat.id,  # Use `message.chat.id`, not `message.chat.id.message_id`
-            f"✅ Added {amount} credits to user {user_id}.\n💰 Total Credits: {new_credits}",
-            parse_mode="Markdown"
-        )
-
-    except ValueError:
-        bot.send_message(message.chat.id, "❌ Invalid format! Use: `/addcredits <user_id> <amount>`", parse_mode="Markdown")
-
-    except Exception as e:
-        bot.send_message(message.chat.id, f"⚠️ Error: {str(e)}")
-
-# Start polling
-print("Bot is running...")
-bot.polling(none_stop=True)
+bot.polling()

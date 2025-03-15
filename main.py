@@ -1,6 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import requests
+import threading  # ✅ Fix: Threading use karenge
 
 # Bot Token, Group ID & Channel Username
 BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
@@ -81,13 +82,15 @@ async def search_vehicle(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("No details found or invalid vehicle number.")
 
-def main():
+def run_bot():
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_vehicle))
 
     print("Bot is running...")
-    application.run_polling()  # ✅ FIXED: asyncio.run() hata diya, direct run_polling() use kiya
+    application.run_polling()  # ✅ Thread me run karenge
 
+# ✅ Fix: Streamlit ke saath thread me run karna hoga
 if __name__ == "__main__":
-    main()  # ✅ Fix applied
+    bot_thread = threading.Thread(target=run_bot)  # Thread start karo
+    bot_thread.start()

@@ -33,7 +33,7 @@ async def start(update: Update, context: CallbackContext):
 
 async def fetch_vehicle_details(vehicle_number):
     if " " in vehicle_number or len(vehicle_number) > 10:
-        return None  # Invalid format, ignore
+        return None  
 
     url = f"https://car.app/api/vehicle?numberPlate={vehicle_number}"
     response = requests.get(url)
@@ -64,7 +64,7 @@ async def search_vehicle(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     chat_id = update.message.chat_id
 
-    if chat_id != GROUP_ID:  # Agar group ke bahar hai
+    if chat_id != GROUP_ID:
         await update.message.reply_text("❌ This bot works only in @RtoVehicle group.")
         return
 
@@ -82,13 +82,13 @@ async def search_vehicle(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("No details found or invalid vehicle number.")
 
-def main():
+async def main():
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_vehicle))
 
     print("Bot is running...")
-    application.run_polling()  # Direct run without asyncio.run()
+    await application.run_polling()  # `asyncio.run()` ke saath chalane ke liye async function bana diya
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())  # Fix: Streamlit ya server pe proper asyncio loop chalega

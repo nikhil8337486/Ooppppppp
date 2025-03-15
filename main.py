@@ -1,7 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import requests
-import threading  
 import asyncio  
 
 # Bot Token, Group ID & Channel Username
@@ -83,17 +82,13 @@ async def search_vehicle(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("No details found or invalid vehicle number.")
 
-def run_bot():
-    asyncio.set_event_loop(asyncio.new_event_loop())  # ✅ Fix: Naya event loop banao
+async def main():
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_vehicle))
 
     print("Bot is running...")
-    application.run_polling()
+    await application.run_polling()  # ✅ FIX: Thread ke bina directly asyncio me run
 
-# ✅ Fix: Thread ke andar proper event loop banana zaroori hai
 if __name__ == "__main__":
-    bot_thread = threading.Thread(target=run_bot, daemon=True)  
-    bot_thread.start()
-    bot_thread.join()  # Process ko alive rakhne ke liye
+    asyncio.run(main())  # ✅ FIX: Async function ko seedha asyncio loop me chalao

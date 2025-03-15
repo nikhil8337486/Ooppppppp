@@ -1,13 +1,15 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import requests
+import asyncio
 
 # Bot Token, Group ID & Channel Username
 BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
-GROUP_ID = -1002320210604  # Aapke group ka ID
+GROUP_ID = -1001234567890  # Aapke group ka ID
 CHANNEL_USERNAME = "@BOTS_OSINTT"
 
 async def is_member(user_id, application):
+    """Check karega ki user channel join kiya hai ya nahi"""
     try:
         chat_member = await application.bot.get_chat_member(CHANNEL_USERNAME, user_id)
         return chat_member.status in ["member", "administrator", "creator"]
@@ -15,6 +17,7 @@ async def is_member(user_id, application):
         return False
 
 async def start(update: Update, context: CallbackContext):
+    """Start command handle karega"""
     user_id = update.message.from_user.id
     chat_id = update.message.chat_id
 
@@ -22,8 +25,7 @@ async def start(update: Update, context: CallbackContext):
         await update.message.reply_text("❌ This bot works only in @RtoVehicle group.")
         return
 
-    # Check if user is a member of the channel
-    if not await is_member(user_id, context.application):
+    if not await is_member(user_id, context.application):  # Agar user channel join nahi kiya
         keyboard = [[InlineKeyboardButton("JOIN CHANNEL✅", url="https://t.me/BOTS_OSINTT")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text("Please join the channel first before using this bot.", reply_markup=reply_markup)
@@ -32,6 +34,7 @@ async def start(update: Update, context: CallbackContext):
     await update.message.reply_text("Welcome! Send a vehicle number to search.")
 
 async def fetch_vehicle_details(vehicle_number):
+    """Vehicle API se details fetch karega"""
     if " " in vehicle_number or len(vehicle_number) > 10:
         return None  # Invalid format, ignore
 
@@ -79,19 +82,8 @@ async def fetch_vehicle_details(vehicle_number):
 ━━━━━━━━━━━━━━━━━━━━━━  
    💰 **FINANCER DETAILS**  
 ━━━━━━━━━━━━━━━━━━━━━━  
-🏦 **Financer:** {data.get("financerName", "N/A")}  
+🏦 **Financer:** {financer_name}  
 💵 **Financed:** {financed_status}  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-   📍 **OTHER INFORMATION**  
-━━━━━━━━━━━━━━━━━━━━━━  
-🏭 **Manufacturing Year:** {data.get("manufacturerYear", "N/A")}  
-📌 **Pincode:** {data.get("pincode", "N/A")}  
-🕒 **Last Updated:** {data.get("lmDate", "N/A")}  
-📅 **Data Status:** {data.get("dataStatus", "N/A")}  
-🛞 **Vehicle Type:** {data.get("vehicleType", "N/A")}  
-🏢 **RTO Code:** {data.get("rtoCode", "N/A")}  
-📅 **Emission Date:** {data.get("eDate", "N/A")}  
 
 ━━━━━━━━━━━━━━━━━━━━━━  
    📢 **STATUS**  
@@ -108,6 +100,7 @@ async def fetch_vehicle_details(vehicle_number):
         return "No details found for this vehicle number."
 
 async def search_vehicle(update: Update, context: CallbackContext):
+    """User ne vehicle number send kiya, ye function usko handle karega"""
     user_id = update.message.from_user.id
     chat_id = update.message.chat_id
 
@@ -130,6 +123,7 @@ async def search_vehicle(update: Update, context: CallbackContext):
         await update.message.reply_text("No details found or invalid vehicle number.")
 
 async def main():
+    """Bot start karega"""
     application = Application.builder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
@@ -139,5 +133,4 @@ async def main():
     await application.run_polling()
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())

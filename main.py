@@ -1,7 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import requests
-import asyncio
 
 # Bot Token, Group ID & Channel Username
 BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
@@ -19,7 +18,7 @@ async def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     chat_id = update.message.chat_id
 
-    if chat_id != GROUP_ID:  # Agar group ke bahar hai
+    if chat_id != GROUP_ID:
         await update.message.reply_text("❌ This bot works only in @RtoVehicle group.")
         return
 
@@ -82,13 +81,13 @@ async def search_vehicle(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("No details found or invalid vehicle number.")
 
-async def main():
+def main():
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_vehicle))
 
     print("Bot is running...")
-    await application.run_polling()  # `asyncio.run()` ke saath chalane ke liye async function bana diya
+    application.run_polling()  # ✅ FIXED: asyncio.run() hata diya, direct run_polling() use kiya
 
 if __name__ == "__main__":
-    asyncio.run(main())  # Fix: Streamlit ya server pe proper asyncio loop chalega
+    main()  # ✅ Fix applied

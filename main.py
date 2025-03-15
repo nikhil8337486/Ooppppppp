@@ -2,116 +2,37 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import requests
 import asyncio
+import signal
 
-# 🔑 Bot Token, Group ID & Channel Username
+# 🔑 Bot Token & Group ID
 BOT_TOKEN = "YOUR_BOT_TOKEN"
 GROUP_ID = -1001234567890  # Aapke group ka ID
-CHANNEL_USERNAME = "@BOTS_OSINTT"
 
-# ✅ Function: Check if user is in channel
-async def is_member(user_id, application):
-    try:
-        chat_member = await application.bot.get_chat_member(CHANNEL_USERNAME, user_id)
-        return chat_member.status in ["member", "administrator", "creator"]
-    except:
-        return False
-
-# ✅ /start command
+# ✅ Function: Start Command
 async def start(update: Update, context: CallbackContext):
-    user_id = update.message.from_user.id
     chat_id = update.message.chat_id
-
     if chat_id != GROUP_ID:
         await update.message.reply_text("❌ This bot works only in @RtoVehicle group.")
         return
-
-    if not await is_member(user_id, context.application):
-        keyboard = [[InlineKeyboardButton("JOIN CHANNEL ✅", url="https://t.me/BOTS_OSINTT")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("Please join the channel first before using this bot.", reply_markup=reply_markup)
-        return
-
     await update.message.reply_text("Welcome! Send a vehicle number to search.")
 
 # ✅ Function: Fetch vehicle details
 async def fetch_vehicle_details(vehicle_number):
     if " " in vehicle_number or len(vehicle_number) > 10:
-        return None  # Invalid format, ignore
+        return None
 
     url = f"https://car.app/api/vehicle?numberPlate={vehicle_number}"
     response = requests.get(url)
     if response.status_code == 200 and response.json().get("response"):
         data = response.json()["response"]
-        financer_name = data.get("financerName", "N/A")
-        financed_status = "Yes" if financer_name and financer_name != "On Cash" else "No"
-
-        message = f"""
-━━━━━━━━━━━━━━━━━━━━━━  
-   🚗 **VEHICLE DETAILS**  
-━━━━━━━━━━━━━━━━━━━━━━  
-🔹 **Registration Number:** {data.get("regNo", "N/A")}  
-🔹 **Registration Authority:** {data.get("regAuthority", "N/A")}  
-🔹 **Registration Date:** {data.get("regDate", "N/A")}  
-🔹 **Owner Name:** {data.get("owner", "N/A")}  
-🔹 **Father's Name:** {data.get("ownerFatherName", "N/A")}  
-🔹 **Address:** {data.get("presentAddress", "N/A")}  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-   🚘 **VEHICLE SPECIFICATIONS**  
-━━━━━━━━━━━━━━━━━━━━━━  
-🛠 **Manufacturer:** {data.get("manufacturer", "N/A")}  
-🚘 **Model:** {data.get("vehicle", "N/A")}  
-📌 **Variant:** {data.get("variant", "N/A")}  
-⛽ **Fuel Type:** {data.get("fuelType", "N/A")}  
-🪑 **Seat Capacity:** {data.get("seatCapacity", "N/A")}  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-   ⚙️ **TECHNICAL DETAILS**  
-━━━━━━━━━━━━━━━━━━━━━━  
-🔧 **Chassis Number:** {data.get("chassis", "N/A")}  
-🔧 **Engine Number:** {data.get("engine", "N/A")}  
-📏 **Cubic Capacity:** {data.get("cubicCapacity", "N/A")} cc  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-   📑 **REGISTRATION & INSURANCE**  
-━━━━━━━━━━━━━━━━━━━━━━  
-🛡 **Insurance Company:** {data.get("insuranceCompanyName", "N/A")}  
-🔖 **Policy Number:** {data.get("insurancePolicyNumber", "N/A")}  
-📆 **Insurance Valid Till:** {data.get("insuranceUpto", "N/A")}  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-   💰 **FINANCER DETAILS**  
-━━━━━━━━━━━━━━━━━━━━━━  
-🏦 **Financer:** {financer_name}  
-💵 **Financed:** {financed_status}  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-   📢 **STATUS**  
-━━━━━━━━━━━━━━━━━━━━━━  
-✅ **RC Status:** Y  
-🕒 **Last Updated:** {data.get("lmDate", "N/A")}  
-
-━━━━━━━━━━━━━━━━━━━━━━  
-⭒ **Powered By:** @VEHICLEINFOIND_BOT  
-━━━━━━━━━━━━━━━━━━━━━━  
-"""
-        return message
-    else:
-        return "No details found for this vehicle number."
+        return f"🚗 **Vehicle:** {data.get('vehicle', 'N/A')}\n🔹 **Owner:** {data.get('owner', 'N/A')}"
+    return "No details found for this vehicle number."
 
 # ✅ Function: Search vehicle
 async def search_vehicle(update: Update, context: CallbackContext):
-    user_id = update.message.from_user.id
     chat_id = update.message.chat_id
-
     if chat_id != GROUP_ID:
         await update.message.reply_text("❌ This bot works only in @RtoVehicle group.")
-        return
-
-    if not await is_member(user_id, context.application):
-        keyboard = [[InlineKeyboardButton("JOIN CHANNEL ✅", url="https://t.me/BOTS_OSINTT")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("Please join the channel first before using this bot.", reply_markup=reply_markup)
         return
 
     vehicle_number = update.message.text.strip().upper()
@@ -122,14 +43,21 @@ async def search_vehicle(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("No details found or invalid vehicle number.")
 
-# ✅ Main function
-async def main():
+# ✅ Main function (Fixed asyncio issue)
+def main():
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_vehicle))
 
+    loop = asyncio.new_event_loop()  # ✅ Fix: Create a new asyncio loop
+    asyncio.set_event_loop(loop)
+
+    # ✅ Fix: Handle signals manually
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, lambda: asyncio.create_task(application.stop()))
+
     print("🚀 Bot is running...")
-    await application.run_polling()  # ✅ No Threading Issues
+    loop.run_until_complete(application.run_polling())
 
 if __name__ == "__main__":
-    asyncio.run(main())  # ✅ Fixed: Directly use `asyncio.run()`
+    main()  # ✅ No `asyncio.run()`, Fixed `add_signal_handler`

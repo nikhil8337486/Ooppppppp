@@ -1,7 +1,7 @@
-python-telegram-bot==20.8
+python-telegram-bot==20.6
 urllib3==1.26.16
 requests==2.31.0
 flask==3.0.0
 gunicorn==21.2.0
 pyTelegramBotAPI
-requests
+requests==2.31.0

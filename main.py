@@ -115,7 +115,7 @@ def handle_message(message):
         keyboard = telebot.types.InlineKeyboardMarkup()
         join_button = telebot.types.InlineKeyboardButton("JOIN CHANNEL ✅", url="https://t.me/BOTS_OSINTT")
         keyboard.add(join_button)
-        bot.reply_to(message, "🚨 **Join the channel first to use this bot!**", reply_markup=keyboard)
+        bot.reply_to(message, "🚨 Join the channel first to use this bot!", reply_markup=keyboard)
         return
 
     # 🔍 Validate vehicle number (max 10 characters, no spaces)

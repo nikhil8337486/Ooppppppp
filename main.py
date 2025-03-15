@@ -69,7 +69,6 @@ def format_vehicle_details(data):
 📌 Pincode: {data.get("pincode", "N/A")}
 🕒 Last Updated: {data.get("lmDate", "N/A")}
 📅 Data Status: {data.get("dataStatus", "N/A")}
-📜 Transaction Key: {data.get("transKey", "N/A")}
 🛞 Vehicle Type: {data.get("vehicleType", "N/A")}
 🏢 RTO Code: {data.get("rtoCode", "N/A")}
 📅 Emission Date: {data.get("eDate", "N/A")}

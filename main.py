@@ -5,9 +5,19 @@ import re
 # Replace with your bot token and group ID
 BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
 GROUP_ID = -1002320210604  # Replace with your actual group ID
+CHANNEL_USERNAME = "@BOTS_OSINTT"  # Aapka channel username
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
+# ✅ Function: Check if user is a member of the channel
+def is_member(user_id):
+    try:
+        chat_member = bot.get_chat_member(CHANNEL_USERNAME, user_id)
+        return chat_member.status in ["member", "administrator", "creator"]
+    except:
+        return False  # Agar koi error aaye toh assume karenge ki user member nahi hai
+
+# ✅ Function: Fetch vehicle details
 def fetch_vehicle_details(plate_number):
     url = f"https://carflow-mocha.vercel.app/api/vehicle?numberPlate={plate_number}"
     response = requests.get(url)
@@ -19,19 +29,16 @@ def fetch_vehicle_details(plate_number):
     
     return None  
 
+# ✅ Function: Format vehicle details
 def format_vehicle_details(data):
     financed_status = "Yes" if data.get("financerName") and data["financerName"].lower() != "on cash" else "No"
-    rc_status = data.get("status", "N/A")
 
     return f"""
 ━━━━━━━━━━━━━━━━━━━━━━
    🚗 VEHICLE DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━
 🔹 Registration Number: {data.get("regNo", "N/A")}
-🔹 Registration Authority: {data.get("regAuthority", "N/A")}
-🔹 Registration Date: {data.get("regDate", "N/A")}
 🔹 Owner Name: {data.get("owner", "N/A")}
-🔹 Father's Name: {data.get("ownerFatherName", "N/A")}
 🔹 Address: {data.get("presentAddress", "N/A")}
 
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -39,40 +46,7 @@ def format_vehicle_details(data):
 ━━━━━━━━━━━━━━━━━━━━━━
 🛠 Manufacturer: {data.get("manufacturer", "N/A")}
 🚘 Model: {data.get("vehicle", "N/A")}
-📌 Variant: {data.get("variant", "N/A")}
 ⛽ Fuel Type: {data.get("fuelType", "N/A")}
-🪑 Seat Capacity: {data.get("seatCapacity", "N/A")}
-
-━━━━━━━━━━━━━━━━━━━━━━
-   ⚙️ TECHNICAL DETAILS
-━━━━━━━━━━━━━━━━━━━━━━
-🔧 Chassis Number: {data.get("chassis", "N/A")}
-🔧 Engine Number: {data.get("engine", "N/A")}
-📏 Cubic Capacity: {data.get("cubicCapacity", "N/A")} cc
-
-━━━━━━━━━━━━━━━━━━━━━━
-   📑 REGISTRATION & INSURANCE
-━━━━━━━━━━━━━━━━━━━━━━
-🛡 Insurance Company: {data.get("insuranceCompanyName", "N/A")}
-🔖 Policy Number: {data.get("insurancePolicyNumber", "N/A")}
-📆 Insurance Valid Till: {data.get("insuranceUpto", "N/A")}
-
-━━━━━━━━━━━━━━━━━━━━━━
-   💰 FINANCER DETAILS
-━━━━━━━━━━━━━━━━━━━━━━
-🏦 Financer: {data.get("financerName", "N/A")}
-💵 Financed: {financed_status}
-
-━━━━━━━━━━━━━━━━━━━━━━
-   📍 OTHER INFORMATION
-━━━━━━━━━━━━━━━━━━━━━━
-🏭 Manufacturing Year: {data.get("manufacturerYear", "N/A")}
-📌 Pincode: {data.get("pincode", "N/A")}
-🕒 Last Updated: {data.get("lmDate", "N/A")}
-📅 Data Status: {data.get("dataStatus", "N/A")}
-🛞 Vehicle Type: {data.get("vehicleType", "N/A")}
-🏢 RTO Code: {data.get("rtoCode", "N/A")}
-📅 Emission Date: {data.get("eDate", "N/A")}
 
 ━━━━━━━━━━━━━━━━━━━━━━
    📢 STATUS
@@ -85,6 +59,7 @@ def format_vehicle_details(data):
 ━━━━━━━━━━━━━━━━━━━━━━
 """
 
+# ✅ /start command
 @bot.message_handler(commands=['start'])
 def start(message):
     if message.chat.type == "private":
@@ -92,17 +67,28 @@ def start(message):
     else:
         bot.reply_to(message, "Send a vehicle number to get details.")
 
+# ✅ Message handler: Check membership and fetch vehicle details
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     if message.chat.id != GROUP_ID:
         return  
 
+    user_id = message.from_user.id
+
+    # 🔍 Check if user is a member of the channel
+    if not is_member(user_id):
+        keyboard = telebot.types.InlineKeyboardMarkup()
+        join_button = telebot.types.InlineKeyboardButton("JOIN CHANNEL ✅", url="https://t.me/BOTS_OSINTT")
+        keyboard.add(join_button)
+        bot.reply_to(message, "🚨 **Join the channel first to use this bot!**", reply_markup=keyboard)
+        return
+
+    # 🔍 Validate vehicle number (max 10 characters, no spaces)
     plate_number = message.text.strip().upper()
-
-    # Check if the vehicle number is valid (max 10 characters, no spaces)
     if not re.match(r"^[A-Z0-9]{1,10}$", plate_number):
-        return  # Ignore invalid numbers (no response)
+        return  
 
+    # 🔍 Fetch vehicle details
     details = fetch_vehicle_details(plate_number)
     
     if details:
@@ -110,4 +96,5 @@ def handle_message(message):
     else:
         bot.reply_to(message, "❌ No details found for this vehicle number.")
 
+# ✅ Run the bot
 bot.polling()

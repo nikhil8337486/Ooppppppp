@@ -1,40 +1,37 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import requests
 
 # Bot Token, Group ID & Channel Username
 BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
-GROUP_USERNAME = "@RtoVehicle"
+GROUP_ID = -1002320210604  # Aapke group ka ID
 CHANNEL_USERNAME = "@BOTS_OSINTT"
 
-def is_member(user_id, context):
+async def is_member(user_id, application):
     try:
-        chat_member = context.bot.get_chat_member(CHANNEL_USERNAME, user_id)
+        chat_member = await application.bot.get_chat_member(CHANNEL_USERNAME, user_id)
         return chat_member.status in ["member", "administrator", "creator"]
     except:
         return False
 
-def is_in_group(update: Update):
-    return update.message.chat.username == GROUP_USERNAME or str(update.message.chat.id).startswith("-100")
-
-def start(update: Update, context: CallbackContext):
+async def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
+    chat_id = update.message.chat_id
 
-    # Check if used outside the group
-    if not is_in_group(update):
-        update.message.reply_text("❌ This bot works only in @RtoVehicle group.")
+    if chat_id != GROUP_ID:  # Agar group ke bahar hai
+        await update.message.reply_text("❌ This bot works only in @RtoVehicle group.")
         return
 
-    # Check if user has joined the required channel
-    if not is_member(user_id, context):
+    # Check if user is a member of the channel
+    if not await is_member(user_id, context.application):
         keyboard = [[InlineKeyboardButton("JOIN CHANNEL✅", url="https://t.me/BOTS_OSINTT")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        update.message.reply_text("Please join the channel first before using this bot.", reply_markup=reply_markup)
+        await update.message.reply_text("Please join the channel first before using this bot.", reply_markup=reply_markup)
         return
 
-    update.message.reply_text("Welcome! Send a vehicle number to search.")
+    await update.message.reply_text("Welcome! Send a vehicle number to search.")
 
-def fetch_vehicle_details(vehicle_number):
+async def fetch_vehicle_details(vehicle_number):
     if " " in vehicle_number or len(vehicle_number) > 10:
         return None  # Invalid format, ignore
 
@@ -42,12 +39,9 @@ def fetch_vehicle_details(vehicle_number):
     response = requests.get(url)
     if response.status_code == 200 and response.json().get("response"):
         data = response.json()["response"]
-
-        # Check financing status
         financer_name = data.get("financerName", "N/A")
         financed_status = "Yes" if financer_name and financer_name != "On Cash" else "No"
 
-        # Format vehicle details
         message = f"""
 ━━━━━━━━━━━━━━━━━━━━━━  
    🚗 **VEHICLE DETAILS**  
@@ -107,44 +101,43 @@ def fetch_vehicle_details(vehicle_number):
 
 ━━━━━━━━━━━━━━━━━━━━━━  
 ⭒ **Powered By:** @VEHICLEINFOIND_BOT  
-━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━  
 """
         return message
     else:
         return "No details found for this vehicle number."
 
-def search_vehicle(update: Update, context: CallbackContext):
+async def search_vehicle(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
+    chat_id = update.message.chat_id
 
-    # If bot is used outside the group
-    if not is_in_group(update):
-        update.message.reply_text("❌ This bot works only in @RtoVehicle group.")
+    if chat_id != GROUP_ID:  # Agar group ke bahar hai
+        await update.message.reply_text("❌ This bot works only in @RtoVehicle group.")
         return
 
-    # If user hasn't joined the required channel
-    if not is_member(user_id, context):
+    if not await is_member(user_id, context.application):
         keyboard = [[InlineKeyboardButton("JOIN CHANNEL✅", url="https://t.me/BOTS_OSINTT")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        update.message.reply_text("Please join the channel first before using this bot.", reply_markup=reply_markup)
+        await update.message.reply_text("Please join the channel first before using this bot.", reply_markup=reply_markup)
         return
 
     vehicle_number = update.message.text.strip().upper()
-    details = fetch_vehicle_details(vehicle_number)
+    details = await fetch_vehicle_details(vehicle_number)
 
     if details:
-        update.message.reply_text(details, parse_mode="Markdown")
+        await update.message.reply_text(details)
     else:
-        update.message.reply_text("No details found or invalid vehicle number.")
+        await update.message.reply_text("No details found or invalid vehicle number.")
 
-def main():
-    updater = Updater(BOT_TOKEN, use_context=True)
-    dp = updater.dispatcher
+async def main():
+    application = Application.builder().token(BOT_TOKEN).build()
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, search_vehicle))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_vehicle))
 
-    updater.start_polling()
-    updater.idle()
+    print("Bot is running...")
+    await application.run_polling()
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())

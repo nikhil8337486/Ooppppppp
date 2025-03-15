@@ -2,22 +2,31 @@ import telebot
 import requests
 import re
 
-# Replace with your bot token and group ID
+# Replace with your bot token, group ID, and channel username
 BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
 GROUP_ID = -1002320210604  # Replace with your actual group ID
+CHANNEL_USERNAME = "BOTS_OSINTT"
 
 bot = telebot.TeleBot(BOT_TOKEN)
+
+def is_member(user_id):
+    """Check if the user is a member of the required channel."""
+    try:
+        chat_member = bot.get_chat_member(f"@{CHANNEL_USERNAME}", user_id)
+        return chat_member.status in ["member", "administrator", "creator"]
+    except Exception:
+        return False
 
 def fetch_vehicle_details(plate_number):
     url = f"https://carflow-mocha.vercel.app/api/vehicle?numberPlate={plate_number}"
     response = requests.get(url)
-    
+
     if response.status_code == 200:
         data = response.json().get("response")
-        if data:  # Check if response contains data
+        if data:  
             return format_vehicle_details(data)
     
-    return "🚫 Vehicle details not found. Please check the number and try again."
+    return None  
 
 def format_vehicle_details(data):
     financed_status = "Yes" if data.get("financerName") and data["financerName"].lower() != "on cash" else "No"
@@ -96,6 +105,15 @@ def start(message):
 def handle_message(message):
     if message.chat.id != GROUP_ID:
         return  
+
+    user_id = message.from_user.id
+
+    if not is_member(user_id):
+        markup = telebot.types.InlineKeyboardMarkup()
+        join_button = telebot.types.InlineKeyboardButton("JOIN CHANNEL✅", url=f"https://t.me/{CHANNEL_USERNAME}")
+        markup.add(join_button)
+        bot.reply_to(message, "Please join the channel first before using this bot.", reply_markup=markup)
+        return
 
     plate_number = message.text.strip().upper()
 

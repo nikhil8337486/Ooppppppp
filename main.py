@@ -1,5 +1,6 @@
 import telebot
 import requests
+import re
 
 # Replace with your bot token and group ID
 BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
@@ -94,15 +95,19 @@ def start(message):
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     if message.chat.id != GROUP_ID:
-        bot.reply_to(message, "❌ This bot works only in @RtoVehicle group.")
-        return
+        return  
 
     plate_number = message.text.strip().upper()
+
+    # Check if the vehicle number is valid (max 10 characters, no spaces)
+    if not re.match(r"^[A-Z0-9]{1,10}$", plate_number):
+        return  # Ignore invalid numbers (no response)
+
+    details = fetch_vehicle_details(plate_number)
     
-    if len(plate_number) > 7:  # Basic check for vehicle number format
-        details = fetch_vehicle_details(plate_number)
+    if details:
         bot.reply_to(message, details)
     else:
-        bot.reply_to(message, "🚫 Please enter a valid vehicle number.")
+        bot.reply_to(message, "❌ No details found for this vehicle number.")
 
 bot.polling()

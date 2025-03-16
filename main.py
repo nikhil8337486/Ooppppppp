@@ -1,11 +1,14 @@
 import telebot
 import requests
 import re
+import json
+import time
 
 # Replace with your bot token and group ID
 BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
 GROUP_ID = -1002320210604  # Replace with your actual group ID
 CHANNEL_USERNAME = "@BOTS_OSINTT"  # Aapka channel username
+ADMIN_CHAT_ID = 7394317325  # Yahan apna Telegram ID daalein
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -15,7 +18,7 @@ def is_member(user_id):
         chat_member = bot.get_chat_member(CHANNEL_USERNAME, user_id)
         return chat_member.status in ["member", "administrator", "creator"]
     except:
-        return False  # Agar koi error aaye toh assume karenge ki user member nahi hai
+        return False  
 
 # ✅ Function: Fetch vehicle details
 def fetch_vehicle_details(plate_number):
@@ -94,13 +97,63 @@ def format_vehicle_details(data):
 ⭒ Powered By: @VEHICLEINFOIND_BOT
 ━━━━━━━━━━━━━━━━━━━━━━
 """
+
+# ✅ Load & Save Users List
+USER_DATA_FILE = "users.json"
+
+def load_users():
+    try:
+        with open(USER_DATA_FILE, "r") as file:
+            data = json.load(file)
+            return data if isinstance(data, list) else []
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+def save_users(users):
+    with open(USER_DATA_FILE, "w") as file:
+        json.dump(users, file)
+
 # ✅ /start command
 @bot.message_handler(commands=['start'])
 def start(message):
+    chat_id = message.chat.id
+    users = load_users()
+
+    if chat_id not in users:
+        users.append(chat_id)
+        save_users(users)
+
     if message.chat.type == "private":
         bot.reply_to(message, "❌ This bot works only in @RtoVehicle group.")
     else:
         bot.reply_to(message, "Send a vehicle number to get details.")
+
+# ✅ Broadcast Command (Only for Admin)
+@bot.message_handler(commands=['broadcast'])
+def broadcast_message(message):
+    if message.chat.id != ADMIN_CHAT_ID:
+        bot.reply_to(message, "❌ You are not authorized to send broadcasts.")
+        return
+
+    text = message.text.replace("/broadcast ", "").strip()
+    users = load_users()
+
+    if not users:
+        bot.reply_to(message, "⚠️ No users found to broadcast.")
+        return
+
+    bot.reply_to(message, f"📢 Sending broadcast to {len(users)} users...")
+
+    failed = 0
+    for user_id in users:
+        try:
+            bot.send_message(user_id, f"📢 Broadcast:\n{text}")
+            time.sleep(1)
+        except Exception as e:
+            failed += 1
+            print(f"❌ Failed to send message to {user_id}: {e}")
+
+    bot.reply_to(message, f"✅ Broadcast sent! ({len(users) - failed} success, {failed} failed)")
 
 # ✅ Message handler: Check membership and fetch vehicle details
 @bot.message_handler(func=lambda message: True)

@@ -2,10 +2,10 @@ import telebot
 import requests
 import re
 import json
-from datetime import datetime 
+import time
 
 # Replace with your bot token and group ID
-BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
+BOT_TOKEN = "7932561618:AAEm_srwvZ0F6JuVBzpr0WzLEdktBzbT4Ko"
 GROUP_ID = -1002601876261  # Replace with your actual group ID
 CHANNEL_USERNAME = "@BOTS_OSINTT"  # Aapka channel username
 ADMIN_CHAT_ID = 7394317325  # Yahan apna Telegram ID daalein
@@ -20,98 +20,78 @@ def is_member(user_id):
     except:
         return False  
 
-# ✅ Function: Fetch vehicle details using new API
+# ✅ Function: Fetch vehicle details
 def fetch_vehicle_details(plate_number):
-    url = "https://api.dhboss.com/apicall/advance_vehicle_verification/"
-    payload = {
-        "vehicleNo": plate_number,
-        "apikeyfill": "Gtbv0iz29bXEJ9CUqFJMMBttsUgkxXWLOMLYxvuIapP6xlLxRuypc5fGOsUkawkCPp6rlU"  # Replace with your actual API key
-    }
-    response = requests.post(url, data=payload)
+    url = f"https://carflow-mocha.vercel.app/api/vehicle?numberPlate={plate_number}"
+    response = requests.get(url)
 
     if response.status_code == 200:
         data = response.json().get("response")
-        if data:
+        if data:  
             return format_vehicle_details(data)
     
     return None  
 
-# ✅ Function: Format vehicle details (Updated for New API)
+# ✅ Function: Format vehicle details
 def format_vehicle_details(data):
-    # Current date and time for Last Updated
-    last_updated = datetime.now().strftime("%Y-%m-%d %I:%M %p")
-
-    # Check if vehicle is financed
-    financed_status = "Yes" if data.get("is_financed") else "No"
+    financed_status = "Yes" if data.get("financerName") and data["financerName"].lower() != "on cash" else "No"
 
     return f"""
 ━━━━━━━━━━━━━━━━━━━━━━
    🚗 VEHICLE DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━
-🔹 Registration Number: {data.get("license_plate", "N/A")}
-🔹 Registration Date: {data.get("registration_date", "N/A")}
-🔹 Owner Name: {data.get("owner_name", "N/A")}
-🔹 Father's Name: {data.get("father_name", "N/A")}
-🔹 Present Address: {data.get("present_address", "N/A")}
-🔹 Permanent Address: {data.get("permanent_address", "N/A")}
+🔹 Registration Number: {data.get("regNo", "N/A")}
+🔹 Registration Authority: {data.get("regAuthority", "N/A")}
+🔹 Registration Date: {data.get("regDate", "N/A")}
+🔹 Owner Name: {data.get("owner", "N/A")}
+🔹 Father's Name: {data.get("ownerFatherName", "N/A")}
+🔹 Address: {data.get("presentAddress", "N/A")}
 
 ━━━━━━━━━━━━━━━━━━━━━━
    🚘 VEHICLE SPECIFICATIONS
 ━━━━━━━━━━━━━━━━━━━━━━
-🛠 Brand: {data.get("brand_name", "N/A")}
-🚘 Model: {data.get("brand_model", "N/A")}
-📌 Class: {data.get("class", "N/A")}
-⛽ Fuel Type: {data.get("fuel_type", "N/A")}
-📏 Cubic Capacity: {data.get("cubic_capacity", "N/A")} cc
-🛞 Seating Capacity: {data.get("seating_capacity", "N/A")}
+🛠 Manufacturer: {data.get("manufacturer", "N/A")}
+🚘 Model: {data.get("vehicle", "N/A")}
+📌 Variant: {data.get("variant", "N/A")}
+⛽ Fuel Type: {data.get("fuelType", "N/A")}
+🪑 Seat Capacity: {data.get("seatCapacity", "N/A")}
 
 ━━━━━━━━━━━━━━━━━━━━━━
    ⚙️ TECHNICAL DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━
-🔧 Chassis Number: {data.get("chassis_number", "N/A")}
-🔧 Engine Number: {data.get("engine_number", "N/A")}
-🚗 Color: {data.get("color", "N/A")}
-📜 Norms: {data.get("norms", "N/A")}
-⚖ Gross Weight: {data.get("gross_weight", "N/A")}
-🔩 Cylinders: {data.get("cylinders", "N/A")}
+🔧 Chassis Number: {data.get("chassis", "N/A")}
+🔧 Engine Number: {data.get("engine", "N/A")}
+📏 Cubic Capacity: {data.get("cubicCapacity", "N/A")} cc
 
 ━━━━━━━━━━━━━━━━━━━━━━
    📑 REGISTRATION & INSURANCE
 ━━━━━━━━━━━━━━━━━━━━━━
-🛡 Insurance Company: {data.get("insurance_company", "N/A")}
-🔖 Policy Number: {data.get("insurance_policy", "N/A")}
-📆 Insurance Valid Till: {data.get("insurance_expiry", "N/A")}
+🛡 Insurance Company: {data.get("insuranceCompanyName", "N/A")}
+🔖 Policy Number: {data.get("insurancePolicyNumber", "N/A")}
+📆 Insurance Valid Till: {data.get("insuranceUpto", "N/A")}
 
 ━━━━━━━━━━━━━━━━━━━━━━
    💰 FINANCER DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━
-🏦 Financer: {data.get("financer", "N/A")}
+🏦 Financer: {data.get("financerName", "N/A")}
 💵 Financed: {financed_status}
 
 ━━━━━━━━━━━━━━━━━━━━━━
    📍 OTHER INFORMATION
 ━━━━━━━━━━━━━━━━━━━━━━
-📅 PUCC Valid Upto: {data.get("pucc_upto", "N/A")}
-📜 PUCC Number: {data.get("pucc_number", "N/A")}
-👥 Owner Count: {data.get("owner_count", "N/A")}
-🛑 Tax Paid Upto: {data.get("tax_paid_upto", "N/A")}
-🛂 Permit Number: {data.get("permit_number", "N/A")}
-📅 Permit Valid Upto: {data.get("permit_valid_upto", "N/A")}
-🚛 Permit Type: {data.get("permit_type", "N/A")}
-🆔 National Permit Number: {data.get("national_permit_number", "N/A")}
-📆 National Permit Valid Upto: {data.get("national_permit_upto", "N/A")}
-📌 Vehicle Age: {data.get("vehicle_age", "N/A")}
-📜 NOC Details: {data.get("noc_details", "N/A")}
-🏢 Permit Issued By: {data.get("national_permit_issued_by", "N/A")}
-📅 Permit Issue Date: {data.get("permit_issue_date", "N/A")}
-📅 Permit Valid From: {data.get("permit_valid_from", "N/A")}
-📅 Tax Upto: {data.get("tax_upto", "N/A")}
+🏭 Manufacturing Year: {data.get("manufacturerYear", "N/A")}
+📌 Pincode: {data.get("pincode", "N/A")}
+🕒 Last Updated: {data.get("lmDate", "N/A")}
+📅 Data Status: {data.get("dataStatus", "N/A")}
+🛞 Vehicle Type: {data.get("vehicleType", "N/A")}
+🏢 RTO Code: {data.get("rtoCode", "N/A")}
+📅 Emission Date: {data.get("eDate", "N/A")}
 
 ━━━━━━━━━━━━━━━━━━━━━━
    📢 STATUS
 ━━━━━━━━━━━━━━━━━━━━━━
-✅ RC Status: {data.get("rc_status", "N/A")}
-🕒 Last Updated: {last_updated}
+✅ RC Status: Y
+🕒 Last Updated: {data.get("lmDate", "N/A")}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 ⭒ Powered By: @VEHICLEINFOIND_BOT

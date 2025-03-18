@@ -124,7 +124,7 @@ def start(message):
         save_users(users)
 
     if message.chat.type == "private":
-        bot.reply_to(message, "❌ This bot works only in @RtoVehicle group.")
+        bot.reply_to(message, "❌ This bot works only in https://t.me/+DVC90_599xw3NmE0 group.")
     else:
         bot.reply_to(message, "Send a vehicle number to get details.")
 

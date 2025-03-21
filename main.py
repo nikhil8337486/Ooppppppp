@@ -5,7 +5,7 @@ import json
 import time
 
 # Replace with your bot token and group ID
-BOT_TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"
+BOT_TOKEN = "7932561618:AAEm_srwvZ0F6JuVBzpr0WzLEdktBzbT4Ko"
 GROUP_ID = -1002601876261  # Replace with your actual group ID
 CHANNEL_USERNAME = "@BOTS_OSINTT"  # Aapka channel username
 ADMIN_CHAT_ID = 7394317325  # Yahan apna Telegram ID daalein

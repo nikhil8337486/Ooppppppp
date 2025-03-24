@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import asyncio
 import logging
 import requests
 from datetime import datetime, timedelta
@@ -596,7 +597,7 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # Start the Bot
-    application.run_polling()
+    application.run_polling()  # Yeh line async function ke andar hai
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())  # Yeh Python 3.10+ ke liye sahi tarika hai

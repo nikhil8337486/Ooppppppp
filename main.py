@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # Configuration
 TOKEN = "7738466078:AAE2CczVGjy0HZwQVgnKXUx-BI-CN0D-cQ8"  # Replace with your actual bot token
 API_URL = "https://nikhilraghav.site/api/api-proxy.php?numberPlate="
-ADMIN_USERNAME = "Piyush8377"  # Admin's username without the '@' symbol
+ADMIN_USERNAME = "bjxxjjhbb"  # Admin's username without the '@' symbol
 SEARCH_COST = 20  # Points cost for one search
 REFERRAL_BONUS = 20  # Points given for referral
 DATABASE_FILE = "user_database.json"

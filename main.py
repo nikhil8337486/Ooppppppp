@@ -1,7 +1,6 @@
 import os
 import json
 import time
-import asyncio
 import logging
 import requests
 from datetime import datetime, timedelta
@@ -581,7 +580,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]])
         )
 
-async def main():
+def main():
     """Start the bot."""
     # Create the Application
     application = Application.builder().token(TOKEN).build()
@@ -597,7 +596,7 @@ async def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # Start the Bot
-    application.run_polling()  # ✅ Async function ke andar
+    application.run_polling()
 
 if __name__ == "__main__":
-    application.run_polling()  # Directly run without asyncio.run()
+    main()

@@ -14,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Configuration
-TOKEN = "7616068751:AAGKPxZnM2sy4N2mhf8o3HN1QE1AxZw8Yxk"  # Replace with your actual bot token
+TOKEN = "BOT_TOKEN"  # Replace with your actual bot token
 API_URL = "https://nikhilraghav.site/api/api-proxy.php?numberPlate="
 ADMIN_USERNAME = "Piyush8377"  # Admin's username without the '@' symbol
 SEARCH_COST = 20  # Points cost for one search

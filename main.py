@@ -600,4 +600,4 @@ async def main():
     application.run_polling()  # ✅ Async function ke andar
 
 if __name__ == "__main__":
-    asyncio.run(main())  # ✅ Async execution
+    application.run_polling()  # Directly run without asyncio.run()

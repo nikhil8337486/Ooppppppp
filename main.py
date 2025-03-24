@@ -581,7 +581,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]])
         )
 
-def main():
+async def main():
     """Start the bot."""
     # Create the Application
     application = Application.builder().token(TOKEN).build()
@@ -597,7 +597,7 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # Start the Bot
-    application.run_polling()  # Yeh line async function ke andar hai
+    application.run_polling()  # ✅ Async function ke andar
 
 if __name__ == "__main__":
-    asyncio.run(main())  # Yeh Python 3.10+ ke liye sahi tarika hai
+    asyncio.run(main())  # ✅ Async execution
